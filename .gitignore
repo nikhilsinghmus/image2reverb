@@ -1,6 +1,9 @@
 # Custom
 dataset/
 standardized_data/
+scripts/output/
+*.pth
+*.tar
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
