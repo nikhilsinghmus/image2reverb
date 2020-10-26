@@ -10,7 +10,8 @@ import os
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
-    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.tiff'
+    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.tiff',
+    ".wav"
 ]
 
 
