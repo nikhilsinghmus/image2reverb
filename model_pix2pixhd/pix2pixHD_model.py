@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import os
 from torch.autograd import Variable
-from util.image_pool import ImagePool
+from .image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
 
