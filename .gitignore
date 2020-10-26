@@ -2,6 +2,8 @@
 dataset/
 standardized_data/
 scripts/output/
+checkpoints/
+results/
 *.pth
 *.tar
 
