@@ -2,6 +2,8 @@ import numpy as np
 import os
 import ntpath
 import time
+import torchaudio
+from .stft import STFT
 from . import util
 from . import html
 import scipy.misc
@@ -12,11 +14,12 @@ except ImportError:
 
 class Visualizer():
     def __init__(self, opt):
-        # self.opt = opt
+        self.opt = opt
         self.tf_log = opt.tf_log
         self.use_html = opt.isTrain and not opt.no_html
         self.win_size = opt.display_winsize
         self.name = opt.name
+        self.stft = STFT()
         if self.tf_log:
             import tensorflow as tf
             self.tf = tf
@@ -120,12 +123,14 @@ class Visualizer():
         txts = []
         links = []
 
-        for label, image_numpy in visuals.items():
-            image_name = '%s_%s.jpg' % (name, label)
-            save_path = os.path.join(image_dir, image_name)
-            util.save_image(image_numpy, save_path)
+        for label, a in visuals.items():
+            if label == "synthesized_image":
+                fname = "%s_%s.wav" % (name, label)
+                save_path = os.path.join(image_dir, fname)
+                y = self.stft.inverse(a).cpu()
+                torchaudio.save(save_path, y, 22050)
 
-            ims.append(image_name)
-            txts.append(label)
-            links.append(image_name)
-        webpage.add_images(ims, txts, links, width=self.win_size)
+            #ims.append(image_name)
+            #txts.append(label)
+            #links.append(image_name)
+        #webpage.add_images(ims, txts, links)
