@@ -22,7 +22,7 @@ if opt.continue_train:
     except:
         start_epoch, epoch_iter = 1, 0
     print('Resuming from epoch %d at iteration %d' % (start_epoch, epoch_iter))        
-else:    
+else:
     start_epoch, epoch_iter = 1, 0
 
 opt.print_freq = lcm(opt.print_freq, opt.batchSize)    
@@ -39,7 +39,7 @@ dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
 
 model = create_model(opt)
-# visualizer = Visualizer(opt)
+visualizer = Visualizer(opt)
 if opt.fp16:    
     from apex import amp
     model, [optimizer_G, optimizer_D] = amp.initialize(model, [model.optimizer_G, model.optimizer_D], opt_level='O1')             
@@ -100,15 +100,15 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         if total_steps % opt.print_freq == print_delta:
             errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}            
             t = (time.time() - iter_start_time) / opt.print_freq
-            # visualizer.print_current_errors(epoch, epoch_iter, errors, t)
-            # visualizer.plot_current_errors(errors, total_steps)
+            visualizer.print_current_errors(epoch, epoch_iter, errors, t)
+            visualizer.plot_current_errors(errors, total_steps)
             #call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"]) 
 
         ### display output images
         # if save_fake:
             # visuals = OrderedDict([('input_label', util.tensor2label(data['label'][0], opt.label_nc)),
-            #                     ('synthesized_image', util.tensor2im(generated.data[0])),
-            #                     ('real_image', util.tensor2im(data['image'][0]))])
+               #                    ('synthesized_image', util.tensor2im(generated.data[0])),
+              #                     ('real_image', util.tensor2im(data['image'][0]))])
             # visualizer.display_current_results(visuals, epoch, total_steps)
 
         ### save latest model

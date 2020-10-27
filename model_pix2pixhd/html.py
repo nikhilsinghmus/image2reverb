@@ -37,7 +37,7 @@ class HTML:
                     with td(style="word-wrap: break-word;", halign="center", valign="top"):
                         with p():
                             with a(href=os.path.join('images', link)):
-                                img(style="width:%dpx" % (width), src=os.path.join('images', im))
+                                audio(src=os.path.join('images', im, controls=True))
                             br()
                             p(txt)
 
