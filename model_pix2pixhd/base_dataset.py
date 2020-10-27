@@ -9,7 +9,7 @@ class BaseDataset(data.Dataset):
         super(BaseDataset, self).__init__()
 
     def name(self):
-        return 'BaseDataset'
+        return "BaseDataset"
 
     def initialize(self, opt):
         pass
@@ -18,9 +18,9 @@ def get_params(opt, size):
     w, h = size
     new_h = h
     new_w = w
-    if opt.resize_or_crop == 'resize_and_crop':
+    if opt.resize_or_crop == "resize_and_crop":
         new_h = new_w = opt.loadSize            
-    elif opt.resize_or_crop == 'scale_width_and_crop':
+    elif opt.resize_or_crop == "scale_width_and_crop":
         new_w = opt.loadSize
         new_h = opt.loadSize * h // w
 
@@ -28,27 +28,27 @@ def get_params(opt, size):
     y = random.randint(0, np.maximum(0, new_h - opt.fineSize))
     
     flip = random.random() > 0.5
-    return {'crop_pos': (x, y), 'flip': flip}
+    return {"crop_pos": (x, y), "flip": flip}
 
 def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
     transform_list = []
-    if 'resize' in opt.resize_or_crop:
+    if "resize" in opt.resize_or_crop:
         osize = [opt.loadSize, opt.loadSize]
         transform_list.append(transforms.Scale(osize, method))   
-    elif 'scale_width' in opt.resize_or_crop:
+    elif "scale_width" in opt.resize_or_crop:
         transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.loadSize, method)))
         
-    if 'crop' in opt.resize_or_crop:
-        transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.fineSize)))
+    if "crop" in opt.resize_or_crop:
+        transform_list.append(transforms.Lambda(lambda img: __crop(img, params["crop_pos"], opt.fineSize)))
 
-    if opt.resize_or_crop == 'none':
+    if opt.resize_or_crop == "none":
         base = float(2 ** opt.n_downsample_global)
-        if opt.netG == 'local':
+        if opt.netG == "local":
             base *= (2 ** opt.n_local_enhancers)
         transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base, method)))
 
     if opt.isTrain and not opt.no_flip:
-        transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
+        transform_list.append(transforms.Lambda(lambda img: __flip(img, params["flip"])))
 
     transform_list += [transforms.ToTensor()]
 
