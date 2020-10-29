@@ -1,18 +1,31 @@
 import torch
 import torchaudio
 
+
+M_PI = 3.14159265358979323846264338
+
+
 class STFT(torch.nn.Module):
     def __init__(self, window_size=1024, hop_length=256, window="hann"):
         super().__init__()
-
         self._w_size = window_size
         self._h_length = hop_length
-        self._w = {"hann": torch.hann_window}[window](self._w_size).cuda()
+        self._w = {"hann": torch.hann_window}[window](self._w_size) # Window table
 
-    def transform(self, input_data):
-        return torchaudio.functional.spectrogram(input_data, 0, self._w, self._w_size, self._h_length, self._w_size, None, False).squeeze()[:-1,:]
+    def transform(self, audio):
+        s = torch.stft(audio, self._w_size, self._h_length, window=self._w, return_complex=True).squeeze()[:-1,:] # Get STFT and trim Nyquist bin
+        m = torch.abs(s) # Magnitude
+        phase_angle = torch.angle(s) # Phase angle
+        i_f = phase_angle[:,1:] - phase_angle[:,:-1] # Finite difference
+        i_f = torch.where(i_f > M_PI, i_f - 2 * M_PI, i_f)
+        i_f = torch.where(i_f < M_PI, i_f + 2 * M_PI, i_f)
+        i_f = torch.cat((phase_angle[:,:1], i_f), axis=1)
+        return torch.stack((torch.log(m), i_f)) # (2, 512, 512) output (log magnitude)
 
     def inverse(self, spec):
-        spec = spec.permute(1, 2, 0)
-        spec = torch.cat((spec, torch.zeros((1, spec.shape[1], spec.shape[2])).cuda()))
-        return torchaudio.functional.istft(spec, self._w_size, self._h_length, self._w_size, self._w, True, None, False, True)
+        m, i_f = spec # (2, 512, 512) input
+        m = torch.exp(m) # Linear magnitude
+        phase_angle = torch.cumsum(i_f, 1)
+        phase = torch.cos(phase_angle) + (torch.sin(phase_angle) * 1j) # Cartopol, basically
+        s = torch.cat((m * phase, torch.zeros((1, m.shape[1]))), axis=0) # Zero-pad for Nyquist bin
+        return torch.istft(s, self._w_size, self._h_length, window=self._w) # Audio output
