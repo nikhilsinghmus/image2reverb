@@ -20,7 +20,7 @@ class STFT(torch.nn.Module):
         i_f = torch.where(i_f > M_PI, i_f - 2 * M_PI, i_f)
         i_f = torch.where(i_f < M_PI, i_f + 2 * M_PI, i_f)
         i_f = torch.cat((phase_angle[:,:1], i_f), axis=1)
-        return torch.stack((torch.log(m), i_f)) # (2, 512, 512) output (log magnitude)
+        return torch.stack((torch.log(m + 1.0e-6), i_f)) # (2, 512, 512) output (log magnitude)
 
     def inverse(self, spec):
         m, i_f = spec # (2, 512, 512) input
