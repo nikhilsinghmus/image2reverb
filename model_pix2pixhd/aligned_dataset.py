@@ -36,7 +36,7 @@ class AlignedDataset(BaseDataset):
         if self.opt.isTrain or self.opt.use_encoded_image:
             B_path = self.B_paths[index]
             B, _ = torchaudio.load(B_path)
-            B_spec = self.stft.transform(B).permute(2, 0, 1)
+            B_spec = self.stft.transform(B)
         
         inst_tensor = feat_tensor = 0
         input_dict = {"label": A_tensor, "inst": inst_tensor, "image": B_spec, 
