@@ -18,7 +18,7 @@ def make_dataset(dir): # Iteratively make the dataset (adapted from Pix2PixHD co
 
 
 class Dataset:
-    def __init__(self, dataset, phase="train"): 
+    def __init__(self, dataset, phase="train"):
 
         dir_A = "_A" # Images
         self.dir_A = os.path.join(dataset, phase + dir_A)
@@ -30,11 +30,16 @@ class Dataset:
 
         self.dataset_size = len(self.A_paths)
         self.stft = STFT()
+        self._image_transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((256,256)),
+            torchvision.transforms.CenterCrop(224),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
       
     def __getitem__(self, index):        
         A_path = self.A_paths[index]
         A = Image.open(A_path)
-        A_tensor = torchvision.transforms.ToTensor()(A).unsqueeze(0) # Transform image to tensor and make a batch
+        A_tensor = self._image_transform(A).unsqueeze(0) # Transform image to tensor and make a batch
 
         B_path = self.B_paths[index]
         B, _ = torchaudio.load(B_path)
