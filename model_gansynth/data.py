@@ -38,7 +38,7 @@ class Dataset:
 
         B_path = self.B_paths[index]
         B, _ = torchaudio.load(B_path)
-        B_spec = self.stft.transform(B) # Compute the spectral representation
+        B_spec = self.stft.transform(B).unsqueeze(0).cuda() # Compute the spectral representation
 
         return A_tensor, B_spec
 

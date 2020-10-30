@@ -31,7 +31,6 @@ class Room2Reverb:
 
     def train_step(self, epoch, spec, label, folder, epoch_iter):
         """Perform one training step."""
-        spec = spec.permute(2, 0, 1).unsqueeze(0).cuda() # Make example into batch
         spec.requires_grad = True # For the backward pass, seems necessary for now
         
         # Forward passes through models
