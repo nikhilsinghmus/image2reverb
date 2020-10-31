@@ -7,6 +7,10 @@ def estimate_t60(audio, sr):
     init = -5.0
     end = -35.0
 
+    audio -= audio.min(1,keepdim=True)[0] # normalize audio to -1:1 because bandpass_biquad clips
+    audio /= audio.max(1,keepdim=True)[0]/2
+    audio -= 1
+
     bands = torch.FloatTensor([125, 250, 500, 1000, 2000, 4000])
     t60 = torch.zeros(bands.shape[0])
 
