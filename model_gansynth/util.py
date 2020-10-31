@@ -1,7 +1,7 @@
 import numpy
 import torch
 import torchaudio
-
+import torch.fft
 
 def estimate_t60(audio, sr):
     init = -5.0
@@ -25,3 +25,16 @@ def estimate_t60(audio, sr):
         end_sample = torch.where(sch_db == sch_end)[0][0]
         t60[band] = 2 * (end_sample - init_sample)
     return t60
+
+def hilbert(x): #hilbert transform
+    N=x.shape[1]
+    Xf = torch.fft.fft(x,n=None,dim=-1)
+    h=torch.zeros(N)
+    if N % 2 == 0:
+        h[0] = h[N // 2] = 1
+        h[1:N // 2] = 2
+    else:
+        h[0] = 1
+        h[1:(N + 1) // 2] = 2
+    x = torch.fft.ifft(Xf * h)
+return x
