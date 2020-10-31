@@ -17,7 +17,7 @@ def estimate_t60(audio, sr):
     for band in range(bands.shape[0]):
         # Filtering signal
         filtered_signal = torchaudio.functional.bandpass_biquad(audio, sr, bands[band])
-        analytic_signal = abs(hilbert(filtered_signal)) #absolute value of hilbert transform
+        analytic_signal = torch.abs(hilbert(filtered_signal)) #absolute value of hilbert transform
 
         # Schroeder integration
         sch = torch.flip(torch.cumsum(torch.flip(abs_signal, [0]) ** 2, 0), [0])
@@ -41,4 +41,11 @@ def hilbert(x): #hilbert transform
         h[0] = 1
         h[1:(N + 1) // 2] = 2
     x = torch.fft.ifft(Xf * h)
-return x
+    return x
+
+def spectral_centroid(x): #calculate the spectral centroid "brightness" of an audio input
+    Xf = torch.abs(torch.fft.fft(x,n=None,dim=-1)) #take fft and abs of x
+    norm_Xf = Xf / sum(sum(Xf))  # like probability mass function
+    norm_freqs = torch.linspace(0, 1, Xf.shape[1])
+    spectral_centroid = sum(sum(norm_freqs * norm_Xf))
+    return spectral_centroid
