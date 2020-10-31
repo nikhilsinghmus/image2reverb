@@ -13,16 +13,16 @@ def estimate_t60(audio, sr):
     for band in range(bands.shape[0]):
         # Filtering signal
         filtered_signal = torchaudio.functional.bandpass_biquad(audio, sr, bands[band])
-        abs_signal = torch.abs(filtered_signal) / torch.max(torch.abs(filtered_signal))
+        analytic_signal = abs(hilbert(filtered_signal)) #absolute value of hilbert transform
 
         # Schroeder integration
         sch = torch.flip(torch.cumsum(torch.flip(abs_signal, [0]) ** 2, 0), [0])
         sch_db = 10.0 * torch.log10(sch / torch.max(sch))
 
-        sch_init = sch_db[torch.abs(sch_db - init).argmin()]
-        sch_end = sch_db[torch.abs(sch_db - end).argmin()]
-        init_sample = torch.where(sch_db == sch_init)[0][0]
-        end_sample = torch.where(sch_db == sch_end)[0][0]
+        sch_init = sch_db[0,torch.abs(sch_db - init).argmin()]
+        sch_end = sch_db[0,torch.abs(sch_db - end).argmin()]
+        init_sample = torch.where(sch_db == sch_init)[1][0]
+        end_sample = torch.where(sch_db == sch_end)[1][0]
         t60[band] = 2 * (end_sample - init_sample)
     return t60
 
