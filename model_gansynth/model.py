@@ -29,7 +29,7 @@ class Room2Reverb:
         self.g_optim = torch.optim.Adam(self.g.model.parameters(), lr=G_LR, betas=ADAM_BETA, eps=ADAM_EPS)
         self.d_optim = torch.optim.Adam(self.d.model.parameters(), lr=D_LR, betas=ADAM_BETA, eps=ADAM_EPS)
 
-    def train_step(self, epoch, spec, label, folder, epoch_iter):
+    def train_step(self, spec, label, train_g):
         """Perform one training step."""
         spec.requires_grad = True # For the backward pass, seems necessary for now
         
@@ -52,7 +52,7 @@ class Room2Reverb:
         self.D_loss.backward()
         self.d_optim.step()
 
-        if epoch_iter % 3 == 0: # Train generator once every three iterations
+        if train_g: # Train generator once every k iterations
             for p in self.d.parameters():
                 p.requires_grad = False
             self.g.zero_grad()
@@ -62,12 +62,6 @@ class Room2Reverb:
             self.G_loss = -mean_fake
             self.G_loss.backward()
         self.g_optim.step()
-
-        if epoch % 10 == 0 and epoch > 0: # Every 10 epochs, store the model
-            torch.save(self.g.state_dict(), os.path.join(folder, "Gnet_%d.pth.tar" % epoch))
-            torch.save(self.g.state_dict(), os.path.join(folder, "Dnet_%d.pth.tar" % epoch))
-            torch.save(self.g.state_dict(), os.path.join(folder, "Gnet_latest.pth.tar"))
-            torch.save(self.g.state_dict(), os.path.join(folder, "Dnet_latest.pth.tar"))
         
     def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity. Implementation taken from https://github.com/caogang/wgan-gp
         alpha = torch.rand(1, 1)

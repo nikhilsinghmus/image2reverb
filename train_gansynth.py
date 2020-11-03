@@ -18,9 +18,16 @@ def main():
     parser.add_argument("--dataset", type=str, default="room2reverb", help="Name of dataset located in the dataset folder.")
     args = parser.parse_args()
 
+    # Model dir
+    folder =  args.name + "_models"
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    
+    # Dataset setup
     d_path = os.path.join("./datasets", args.dataset)
     dataset = Dataset(d_path)
 
+    # Model setup
     model = Room2Reverb(args.encoder_path)
     epoch_iter = 0
 
@@ -30,10 +37,18 @@ def main():
             epoch_iter = epoch_iter % dataset.dataset_size
 
         for i, (img, spec) in enumerate(dataset, start=epoch_iter):
-            model.train_step(epoch, spec, img, args.name + "_models", i - epoch_iter)
+            model.train_step(spec, img, (epoch_iter % 3) == 0)
+            print("------------------------")
+            print("TIme ", epoch_start_time)
             print("G ", model.G_loss.item())
             print("D ", model.D_loss.item())
             print("------------------------")
+        
+        if epoch % 10 == 0 and epoch > 0: # Every 10 epochs, store the model
+            torch.save(model.g.state_dict(), os.path.join(folder, "Gnet_%d.pth.tar" % epoch))
+            torch.save(model.d.state_dict(), os.path.join(folder, "Dnet_%d.pth.tar" % epoch))
+            torch.save(model.g.state_dict(), os.path.join(folder, "Gnet_latest.pth.tar"))
+            torch.save(model.d.state_dict(), os.path.join(folder, "Dnet_latest.pth.tar"))
 
 
 if __name__ == "__main__":
