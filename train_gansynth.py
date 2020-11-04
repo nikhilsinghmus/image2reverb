@@ -1,10 +1,15 @@
 import os
+import numpy
 import argparse
 import time
 import torch
 import torchaudio
 from model_gansynth.model import Room2Reverb
-from model_gansynth.data import Dataset
+from model_pix2pixhd.data_loader import CreateDataLoader
+
+
+import fractions
+def lcm(a,b): return abs(a * b)/fractions.gcd(a,b) if a and b else 0
 
 
 def main():
@@ -12,43 +17,101 @@ def main():
     parser.add_argument("--name", type=str, default="room2reverb", help="Name of the experiment. It decides where to store samples and models.")
     parser.add_argument("--gpu_ids", type=str, default="0", help="GPU IDs: e.g. 0  0,1,2, 0,2. use -1 for CPU")
     parser.add_argument("--checkpoints_dir", type=str, default="./checkpoints", help="Model location.")
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size.")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size.")
     parser.add_argument("--encoder_path", type=str, default="resnet50_places365.pth.tar", help="Path to pre-trained Encoder ResNet50 model.")
     parser.add_argument("--n_epochs", type=int, default=200, help="Number of training epochs.")
     parser.add_argument("--dataset", type=str, default="room2reverb", help="Name of dataset located in the dataset folder.")
+    parser.add_argument("--print_freq", type=int, default=100, help="Frequency of showing training results on console.")
+    parser.add_argument("--niter", type=int, default=200, help="Number of training iters.")
+    parser.add_argument("--save_latest_freq", type=int, default=1000, help="Frequency of saving the latest results.")
+    parser.add_argument("--save_epoch_freq", type=int, default=10, help="Frequency of saving checkpoints at end of epochs.")
+    parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
     args = parser.parse_args()
+
+    print_freq = lcm(args.print_freq, args.batch_size)
+    args.batchSize = args.batch_size
+    args.serial_batches = False
+    args.nThreads = 2
+    args.max_dataset_size = float("inf")
+    args.dataroot = os.path.join("./datasets", args.name)
+    args.phase = "train"
+    args.isTrain = True
+    args.loadSize = 512
+    args.fineSize = 224
+    args.no_flip = True
+    data_loader = CreateDataLoader(args)
+    dataset = data_loader.load_data()
+    dataset_size = len(data_loader)
+    print("#training images = %d" % dataset_size)
 
     # Model dir
     folder =  args.name + "_models"
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    
-    # Dataset setup
-    d_path = os.path.join("./datasets", args.dataset)
-    dataset = Dataset(d_path)
 
-    # Model setup
+    # Main model
     model = Room2Reverb(args.encoder_path)
-    epoch_iter = 0
 
-    for epoch in range(args.n_epochs):
+    # Train settings
+    start_epoch, epoch_iter = 1, 0
+    total_steps = (start_epoch - 1) * dataset_size + epoch_iter
+    print_delta = total_steps % args.print_freq
+    save_delta = total_steps % args.save_latest_freq
+
+    # Train model
+    for epoch in range(start_epoch, args.niter + 1):
         epoch_start_time = time.time()
-        if epoch != 0:
-            epoch_iter = epoch_iter % dataset.dataset_size
+        if epoch != start_epoch:
+            epoch_iter = epoch_iter % dataset_size
 
-        for i, (img, spec) in enumerate(dataset, start=epoch_iter):
-            model.train_step(spec, img, (epoch_iter % 3) == 0)
-            print("------------------------")
-            print("TIme ", epoch_start_time)
-            print("G ", model.G_loss.item())
-            print("D ", model.D_loss.item())
-            print("------------------------")
-        
-        if epoch % 10 == 0 and epoch > 0: # Every 10 epochs, store the model
-            torch.save(model.g.state_dict(), os.path.join(folder, "Gnet_%d.pth.tar" % epoch))
-            torch.save(model.d.state_dict(), os.path.join(folder, "Dnet_%d.pth.tar" % epoch))
-            torch.save(model.g.state_dict(), os.path.join(folder, "Gnet_latest.pth.tar"))
-            torch.save(model.d.state_dict(), os.path.join(folder, "Dnet_latest.pth.tar"))
+        for i, data in enumerate(dataset, start=epoch_iter):
+            if total_steps % args.print_freq == print_delta:
+                iter_start_time = time.time()
+            total_steps += args.batch_size
+            epoch_iter += args.batch_size
+
+            # Model training
+            label = data["label"].cuda()
+            spec = data["image"].cuda()
+            model.train_step(spec, label, (i % 3) == 0)
+
+            # Print progress
+            if (total_steps % args.print_freq) == print_delta:
+                t = (time.time() - iter_start_time) / args.print_freq
+                message = "(epoch: %d, iters: %d, time: %.3f) " % (epoch, i, t)
+                message += "G: %.3f D: %.3f " % (model.G_loss.item(), model.D_loss.item())
+                print(message)
+
+            # Store model
+            if total_steps % args.save_latest_freq == save_delta:
+                print("saving the latest model (epoch %d, total_steps %d)" % (epoch, total_steps))
+                save_network(model.g, "G", "latest")
+                save_network(model.d, "D", "latest")
+
+            if epoch_iter >= dataset_size:
+                break
+
+        # end of epoch 
+        iter_end_time = time.time()
+        print("End of epoch %d / %d \t Time Taken: %d sec" % (epoch, args.niter + args.niter_decay, time.time() - epoch_start_time))
+
+        ### save model for this epoch
+        if epoch % args.save_epoch_freq == 0:
+            print("saving the model at the end of epoch %d, iters %d" % (epoch, total_steps))        
+            save_network(model.g, "G", "latest")
+            save_network(model.d, "D", "latest")
+            save_network(model.g, "G", epoch)
+            save_network(model.d, "D", epoch)
+
+
+
+def save_network(network, network_label, epoch_label):
+    """Store model."""
+    save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
+    save_path = os.path.join(self.save_dir, save_filename)
+    torch.save(network.cpu().state_dict(), save_path)
+    network.cuda()
+
 
 
 if __name__ == "__main__":
