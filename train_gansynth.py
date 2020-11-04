@@ -85,8 +85,8 @@ def main():
             # Store model
             if total_steps % args.save_latest_freq == save_delta:
                 print("saving the latest model (epoch %d, total_steps %d)" % (epoch, total_steps))
-                save_network(model.g, "G", "latest")
-                save_network(model.d, "D", "latest")
+                save_network(model.g, "G", "latest", folder)
+                save_network(model.d, "D", "latest", folder)
 
             if epoch_iter >= dataset_size:
                 break
@@ -97,18 +97,18 @@ def main():
 
         ### save model for this epoch
         if epoch % args.save_epoch_freq == 0:
-            print("saving the model at the end of epoch %d, iters %d" % (epoch, total_steps))        
-            save_network(model.g, "G", "latest")
-            save_network(model.d, "D", "latest")
-            save_network(model.g, "G", epoch)
-            save_network(model.d, "D", epoch)
+            print("saving the model at the end of epoch %d, iters %d" % (epoch, total_steps))
+            save_network(model.g, "G", "latest", folder)
+            save_network(model.d, "D", "latest", folder)
+            save_network(model.g, "G", epoch, folder)
+            save_network(model.d, "D", epoch, folder)
 
 
 
-def save_network(network, network_label, epoch_label):
+def save_network(network, network_label, epoch_label, save_dir):
     """Store model."""
     save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
-    save_path = os.path.join(self.save_dir, save_filename)
+    save_path = os.path.join(save_dir, save_filename)
     torch.save(network.cpu().state_dict(), save_path)
     network.cuda()
 
