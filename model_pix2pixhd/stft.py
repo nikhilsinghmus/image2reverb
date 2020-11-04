@@ -16,20 +16,11 @@ class STFT(torch.nn.Module):
 
     def transform(self, audio):
         s = torch.stft(audio, self._w_size, self._h_length, window=self._w, return_complex=True).squeeze()[:-1,:] # Get STFT and trim Nyquist bin
-        m = torch.abs(s) # Magnitude
-        phase_angle = torch.angle(s) # Phase angle
-        i_f = phase_angle[:,1:] - phase_angle[:,:-1] # Finite difference
-        i_f = torch.cat((phase_angle[:,:1], i_f), axis=1)
-        i_f = torch.where(i_f > M_PI, i_f - 2 * M_PI, i_f)
-        i_f = torch.where(i_f < -M_PI, i_f + 2 * M_PI, i_f)
-        m = torch.log(m + 1.0e-6)
-        return self._n(torch.stack((m, i_f))) # (2, 512, 512) output (log magnitude)
+        return torch.abs(s.unsqueeze(0)) # Magnitude
 
     def inverse(self, spec):
-        m, i_f = spec # (2, 512, 512) input
-        m = torch.exp(m) # Linear magnitude
-        phase_angle = torch.cumsum(i_f, 1) * M_PI
-        phase = torch.cos(phase_angle) + (torch.sin(phase_angle) * 1j) # Cartopol, basically
-        s = torch.cat((m * phase, torch.zeros((1, m.shape[1]))), axis=0) # Zero-pad for Nyquist bin
-        audio = torch.istft(s, self._w_size, self._h_length, window=self._w) # Audio output
+        s = torch.cat((spec, torch.zeros(1, spec.shape[1]).cuda()))
+        random_phase = torch.Tensor(s.shape).uniform_(-M_PI, M_PI)
+        s = torch.stack((s, random_phase), -1)
+        audio = torch.istft(s, self._w_size, self._h_length, window=self._w.cuda()) # Audio output
         return audio/torch.abs(audio).max()
