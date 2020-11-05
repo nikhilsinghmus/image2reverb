@@ -34,29 +34,31 @@ class Room2Reverb:
         
         # Forward passes through models
         f = self.enc.forward(label).cuda()
-        fake_spec = self.g(f)
-        d_fake = self.d(fake_spec.detach())
+        fake_spec = self.g(f).detach()
+        d_fake = self.d(fake_spec)
         d_real = self.d(spec)
+        mean_fake = d_fake.mean()
+        mean_real = d_real.mean()
 
         # Update the discriminator weights
-        self.d.zero_grad()
+        self.d_optim.zero_grad()
         gradient_penalty = 10 * self.wgan_gp(spec.data, fake_spec.data)
-        self.D_loss = -d_real.mean() + d_fake.mean() + gradient_penalty
+        self.D_loss = -mean_real + mean_fake + gradient_penalty
         self.D_loss.backward()
         self.d_optim.step()
 
-        self.g.zero_grad()
         if train_g: # Train generator once every k iterations
-            d_fake = self.d(fake_spec)
-            self.G_loss = -d_fake.mean()
+            self.g_optim.zero_grad()
+            self.G_loss = -self.d(self.g(f)).mean()
             self.G_loss.backward()
             self.g_optim.step()
+
         
     def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity
-        alpha = torch.rand(1, 1)
+        alpha = torch.rand(1, 1).cuda()
         interpolates = (alpha * real_data + ((1 - alpha) * fake_data)).requires_grad_(True)
         d_interpolates = self.d(interpolates)
-        fake = torch.autograd.Variable(torch.Tensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False)
+        fake = torch.autograd.Variable(torch.Tensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False).cuda()
         gradients = torch.autograd.grad(
             outputs=d_interpolates,
             inputs=interpolates,

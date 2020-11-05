@@ -25,6 +25,7 @@ class Encoder:
         state_dict = {k.replace("module.", ""): v for k, v in c["state_dict"].items()}
         self.model.load_state_dict(state_dict)
         self.model.fc = Identity()
+        self.model.to(torch.device("cuda"))
         self.model.eval()
 
     def forward(self, x):
