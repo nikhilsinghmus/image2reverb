@@ -8,7 +8,6 @@ G_LR = 2e-4
 D_LR = 4e-4
 ADAM_BETA = (0.0, 0.99)
 ADAM_EPS = 1e-8
-LAMBDA = 1
 
 
 class Room2Reverb:
@@ -38,46 +37,34 @@ class Room2Reverb:
         fake_spec = self.g(f)
         d_fake = self.d(fake_spec.detach())
         d_real = self.d(spec)
-        d_real.backward(-1)
-        d_fake.backward(1)
 
         # Update the discriminator weights
-        for p in self.d.parameters():
-            p.requires_grad = True
         self.d.zero_grad()
-
-        # Backward pass
         gradient_penalty = 10 * self.wgan_gp(spec.data, fake_spec.data)
-        self.D_loss = self.wasserstein_discriminator_loss(d_fake, d_real) + gradient_penalty
+        self.D_loss = -d_real.mean() + d_fake.mean() + gradient_penalty
         self.D_loss.backward()
         self.d_optim.step()
 
+        self.g.zero_grad()
         if train_g: # Train generator once every k iterations
-            for p in self.d.parameters():
-                p.requires_grad = False
-            self.g.zero_grad()
-            
             d_fake = self.d(fake_spec)
-            self.G_loss = self.wasserstein_generator_loss(d_fake)
-            self.G_loss.backward(-1)
-        self.g_optim.step()
-
-    def wasserstein_generator_loss(self, fgz):
-        return torch.mean(fgz)
-
-    def wasserstein_discriminator_loss(self, fx, fgz):
-        return torch.mean(fgz - fx)
+            self.G_loss = -d_fake.mean()
+            self.G_loss.backward()
+            self.g_optim.step()
         
-    def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity. Implementation taken from https://github.com/caogang/wgan-gp
+    def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity
         alpha = torch.rand(1, 1)
-        alpha = alpha.expand(real_data.size())
-        alpha = alpha.cuda()
-
-        interpolates = alpha * real_data + ((1 - alpha) * fake_data)
-        interpolates = interpolates.cuda()
-        interpolates.requires_grad = True
-        disc_interpolates = self.d(interpolates)
-
-        gradients = torch.autograd.grad(outputs=disc_interpolates, inputs=interpolates, grad_outputs=torch.ones(disc_interpolates.size()).cuda())[0]
-        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
+        interpolates = (alpha * real_data + ((1 - alpha) * fake_data)).requires_grad_(True)
+        d_interpolates = self.d(interpolates)
+        fake = torch.autograd.Variable(torch.Tensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False)
+        gradients = torch.autograd.grad(
+            outputs=d_interpolates,
+            inputs=interpolates,
+            grad_outputs=fake,
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True,
+        )[0]
+        gradients = gradients.view(gradients.size(0), -1)
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
         return gradient_penalty
