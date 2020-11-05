@@ -91,11 +91,9 @@ def main():
             if epoch_iter >= dataset_size:
                 break
 
-        # end of epoch 
-        iter_end_time = time.time()
-        print("End of epoch %d / %d \t Time Taken: %d sec" % (epoch, args.niter + args.niter_decay, time.time() - epoch_start_time))
+        print("End of epoch %d / %d \t." % (epoch, args.niter))
 
-        ### save model for this epoch
+        # Save model
         if epoch % args.save_epoch_freq == 0:
             print("saving the model at the end of epoch %d, iters %d" % (epoch, total_steps))
             save_network(model.g, "G", "latest", folder)
