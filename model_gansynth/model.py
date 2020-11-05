@@ -45,10 +45,8 @@ class Room2Reverb:
         self.d.zero_grad()
 
         # Backward pass
-        mean_fake = d_fake.mean()
-        mean_real = d_real.mean()
         gradient_penalty = 10 * self.wgan_gp(spec.data, fake_spec.data)
-        self.D_loss = mean_fake - mean_real + gradient_penalty
+        self.D_loss = self.wasserstein_discriminator_loss(d_real, d_fake) + gradient_penalty
         self.D_loss.backward()
         self.d_optim.step()
 
@@ -59,9 +57,15 @@ class Room2Reverb:
             
             d_fake = self.d(fake_spec)
             mean_fake = d_fake.mean()
-            self.G_loss = -mean_fake
+            self.G_loss = self.wasserstein_generator_loss(d_fake)
             self.G_loss.backward()
         self.g_optim.step()
+
+    def wasserstein_generator_loss(self, fgz):
+        return torch.reduce(-1.0 * fgz, "mean")
+
+    def wasserstein_discriminator_loss(self, fx, fgz):
+        return torch.reduce(fgz - fx, "mean")
         
     def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity. Implementation taken from https://github.com/caogang/wgan-gp
         alpha = torch.rand(1, 1)
