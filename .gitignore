@@ -3,7 +3,7 @@ datasets/
 standardized_data/
 scripts/output/
 checkpoints/
-results/
+results*/
 *.pth
 *.tar
 

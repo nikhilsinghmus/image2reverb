@@ -4,8 +4,8 @@ import argparse
 import time
 import torch
 import torchaudio
-from model_gansynth.model import Room2Reverb
-from model_pix2pixhd.data_loader import CreateDataLoader
+from model.model import Room2Reverb
+from model.data_loader import CreateDataLoader
 
 
 import fractions
@@ -45,7 +45,7 @@ def main():
     print("#training images = %d" % dataset_size)
 
     # Model dir
-    folder =  args.name + "_models"
+    folder = args.checkpoints_dir
     if not os.path.isdir(folder):
         os.makedirs(folder)
 
