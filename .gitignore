@@ -4,6 +4,8 @@ standardized_data/
 scripts/output/
 checkpoints/
 results*/
+*_test/
+nohup*
 *.pth
 *.tar
 

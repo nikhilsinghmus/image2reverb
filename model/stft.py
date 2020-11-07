@@ -11,7 +11,8 @@ class STFT(torch.nn.Module):
         super().__init__()
         self._w_size = window_size
         self._h_length = hop_length
-        self._w = {"hann": torch.hann_window}[window](self._w_size) # Window table
+        d = {"hann": torch.hann_window}
+        self._w = d[window](self._w_size) # Window table
         self._n = torchvision.transforms.Normalize((0.5, 0.5), (0.5, 0.5))
 
     def transform(self, audio):
@@ -20,7 +21,7 @@ class STFT(torch.nn.Module):
 
     def inverse(self, spec):
         s = torch.cat((spec, torch.zeros(1, spec.shape[1]).cuda()))
-        random_phase = torch.Tensor(s.shape).uniform_(-M_PI, M_PI)
-        s = torch.stack((s, random_phase), -1)
-        audio = torch.istft(s, self._w_size, self._h_length, window=self._w.cuda()) # Audio output
+        random_phase = torch.Tensor(s.shape).uniform_(-M_PI, M_PI).cuda()
+        f = s * (torch.cos(random_phase) + (1.j * torch.sin(random_phase)))
+        audio = torch.istft(f, self._w_size, self._h_length, window=self._w.cuda()) # Audio output
         return audio/torch.abs(audio).max()
