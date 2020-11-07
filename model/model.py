@@ -34,31 +34,31 @@ class Room2Reverb:
         
         # Forward passes through models
         f = self.enc.forward(label).cuda()
-        fake_spec = self.g(f).detach()
-        d_fake = self.d(fake_spec)
+        fake_spec = self.g(f)
+        d_fake = self.d(fake_spec.detach())
         d_real = self.d(spec)
         mean_fake = d_fake.mean()
         mean_real = d_real.mean()
 
         # Update the discriminator weights
-        self.d_optim.zero_grad()
+        self.d.zero_grad()
         gradient_penalty = 10 * self.wgan_gp(spec.data, fake_spec.data)
-        self.D_loss = -mean_real + mean_fake + gradient_penalty
+        self.D_loss = -mean_real + mean_fake.mean() + gradient_penalty
         self.D_loss.backward()
         self.d_optim.step()
 
+        self.g.zero_grad()
         if train_g: # Train generator once every k iterations
-            self.g_optim.zero_grad()
-            self.G_loss = -self.d(self.g(f)).mean()
+            d_fake = self.d(fake_spec)
+            self.G_loss = -mean_fake
             self.G_loss.backward()
             self.g_optim.step()
-
         
     def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity
-        alpha = torch.rand(1, 1).cuda()
+        alpha = torch.rand(1, 1)
         interpolates = (alpha * real_data + ((1 - alpha) * fake_data)).requires_grad_(True)
         d_interpolates = self.d(interpolates)
-        fake = torch.autograd.Variable(torch.Tensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False).cuda()
+        fake = torch.Tensor(real_data.shape[0], 1).fill_(1.0).requires_grad_(True)
         gradients = torch.autograd.grad(
             outputs=d_interpolates,
             inputs=interpolates,
@@ -70,3 +70,10 @@ class Room2Reverb:
         gradients = gradients.view(gradients.size(0), -1)
         gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
         return gradient_penalty
+    
+    def load_generator(self, path): # Load a pre-trained generator
+        self.g.load_state_dict(path)
+    
+    def inference(self, img): # Generate output
+        f = self.enc.forward(img).cuda()
+        return self.g(f)
