@@ -25,6 +25,7 @@ class Encoder:
         state_dict = {k.replace("module.", ""): v for k, v in c["state_dict"].items()}
         self.model.load_state_dict(state_dict)
         self.model.fc = Identity()
+        self.model.to(torch.device("cuda"))
         self.model.eval()
 
     def forward(self, x):
@@ -123,7 +124,7 @@ class Generator(nn.Module):
         model.append(nn.LeakyReLU(negative_slope=0.2))
         model.append(PixelWiseNormLayer())
 
-        model.append(nn.Conv2d(32, 2, kernel_size=1, stride=1, padding=0, bias=False))
+        model.append(nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0, bias=False))
         model.append(EqualizedLearningRateLayer(model[-1]))
         model.append(nn.Tanh())
         self.model = nn.Sequential(*model)
@@ -139,7 +140,7 @@ class Discriminator(nn.Module):
 
     def build_model(self):
         model = []
-        model.append(nn.Conv2d(2, 32, kernel_size=1, stride=1, padding=0, bias=False))
+        model.append(nn.Conv2d(1, 32, kernel_size=1, stride=1, padding=0, bias=False))
         model.append(EqualizedLearningRateLayer(model[-1]))
         model.append(nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1, bias=False))
         model.append(EqualizedLearningRateLayer(model[-1]))
