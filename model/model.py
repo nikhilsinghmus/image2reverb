@@ -2,6 +2,7 @@ import os
 import torch
 from .networks import Encoder, Generator, Discriminator
 from .stft import STFT
+from .util import estimate_t60
 
 
 # Hyperparameters
@@ -39,9 +40,10 @@ class Room2Reverb:
         
         # Forward passes through models
         f = self.enc.forward(label).cuda()
-        fake_spec = self.g(f)
-        d_fake = self.d(fake_spec.detach())
-        d_real = self.d(spec)
+        z = torch.randn(f.shape).cuda()
+        fake_spec = self.g(torch.cat((f, z), 1))
+        d_fake = self.d(fake_spec.detach(), f)
+        d_real = self.d(spec, f)
         # mean_fake = d_fake.mean()
         # mean_real = d_real.mean()
 
@@ -60,12 +62,10 @@ class Room2Reverb:
             # self.g_optim.step()
 
         self.g.zero_grad()
-        d_fake2 = self.d(fake_spec.detach())
-        d_real2 = self.d(spec)
-        audio_fake = self.stft.inverse(fake_spec.squeeze())
-        audio_real = self.stft.inverse(spec.squeeze())[:audio_fake.shape[0]]
-        G_loss1 = self._criterion_GAN(d_fake2, d_real2)
-        G_loss2 = self._criterion_extra(audio_fake, audio_real)
+        d_fake2 = self.d(fake_spec.detach(), f)
+        # d_real2 = self.d(spec)
+        G_loss1 = self._criterion_GAN(d_fake2, torch.ones(d_fake2.shape).cuda())
+        G_loss2 = self._criterion_extra(fake_spec, spec)
         self.G_loss = G_loss1 + (LAMBDA * G_loss2)
         self.G_loss.backward()
         self.g_optim.step()
@@ -73,9 +73,10 @@ class Room2Reverb:
         self.d.zero_grad()
         l_fakeD = self._criterion_GAN(d_fake, torch.zeros(d_fake.shape).cuda())
         l_realD = self._criterion_GAN(d_real, torch.ones(d_real.shape).cuda())
-        self.D_loss = 0.5 * (l_realD + l_fakeD)
-        self.D_loss.backward()
-        self.d_optim.step()
+        self.D_loss = (l_realD + l_fakeD)
+        if self.D_loss > 0.2:
+            self.D_loss.backward()
+            self.d_optim.step()
         
     def wgan_gp(self, real_data, fake_data): # Gradient penalty to promote Lipschitz continuity
         alpha = torch.rand(1, 1)
@@ -99,4 +100,4 @@ class Room2Reverb:
     
     def inference(self, img): # Generate output
         f = self.enc.forward(img).cuda()
-        return self.g(f)
+        return self.g(torch.cat((f, torch.randn(f.shape).cuda()), 1))

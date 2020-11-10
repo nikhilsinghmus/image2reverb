@@ -42,7 +42,7 @@ class Encoder:
 
 class Generator(nn.Module):
     """Build non-progressive variant of GANSynth generator."""
-    def __init__(self, latent_size=2048): # Encoder output should contain 2048 values
+    def __init__(self, latent_size=4096): # Encoder output should contain 2048 values
         super().__init__()
         self.latent_size = latent_size
         self.build_model()
@@ -135,8 +135,9 @@ class Discriminator(nn.Module):
         super().__init__()
         self.build_model()
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x, l):
+        k = torch.autograd.Variable(torch.cat((x, l.reshape(1, 1, 512, -1)), -1))
+        return self.model(k)
 
     def build_model(self):
         model = []
@@ -201,5 +202,5 @@ class Discriminator(nn.Module):
         model.append(nn.Flatten())
         model.append(nn.Linear(64, 1))
 
-        model.append(nn.Sigmoid()) # Output probability (in [0, 1])
+        # model.append(nn.Sigmoid()) # Output probability (in [0, 1])
         self.model = nn.Sequential(*model)
