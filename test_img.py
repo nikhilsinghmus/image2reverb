@@ -1,6 +1,7 @@
 import os
 import shutil
 import argparse
+import numpy
 import torch
 import soundfile
 from collections import OrderedDict
@@ -8,6 +9,7 @@ from model import util
 from model.stft import STFT
 from model.data_loader import CreateDataLoader
 from model.model import Room2Reverb
+from PIL import Image
 
 
 def main():
@@ -53,11 +55,13 @@ def main():
         generated = model.inference(data["label"].cuda())
         img_path = data["path"][0]
         print("Processing %s." % img_path)
-        audio = stft.inverse(generated.squeeze())
+        audio = generated.squeeze().cpu().detach().numpy()
+        audio = Image.fromarray(numpy.uint8(((audio - audio.min())/(audio.max() - audio.min())) * 300.0))
         img_outpath = os.path.join(folder, os.path.basename(img_path)).replace("label", "input") 
-        audio_path = os.path.splitext(img_outpath)[0].replace("input", "output") + ".wav"
+        audio_path = os.path.splitext(img_outpath)[0].replace("input", "output") + ".png"
         shutil.copy2(img_path, img_outpath)
-        soundfile.write(audio_path, audio, args.sr)
+        # soundfile.write(audio_path, audio.detach().cpu().numpy(), args.sr)
+        audio.save(audio_path)
 
 if __name__ == "__main__":
     main()

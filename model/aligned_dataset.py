@@ -1,15 +1,17 @@
 import os.path
+import soundfile
 import torchaudio
 from PIL import Image
 from .base_dataset import BaseDataset, get_params, get_transform, normalize
 from .image_folder import make_dataset
 from .stft import STFT
+from .mel import LogMel
 
 class AlignedDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        self.stft = STFT()
+        self.stft = LogMel() if opt.spectrogram == "mel" else STFT()
 
         ### input A (images)
         dir_A = "_A"
@@ -35,7 +37,8 @@ class AlignedDataset(BaseDataset):
         ### input B (audio)
         if self.opt.isTrain or self.opt.use_encoded_image:
             B_path = self.B_paths[index]
-            B, _ = torchaudio.load(B_path)
+            # B, _ = torchaudio.load(B_path)
+            B, _ = soundfile.read(B_path)
             B_spec = self.stft.transform(B)
         
         inst_tensor = feat_tensor = 0
