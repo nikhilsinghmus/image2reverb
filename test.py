@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
     parser.add_argument("--n_test", type=int, default=100, help="Number of test examples.")
     parser.add_argument("--sr", type=int, default=22050, help="Sample rate of output.")
+    parser.add_argument("--model", type=str, default="latest", help="Which model/checkpoint to load.")
     args = parser.parse_args()
     args.batchSize = args.batch_size
     args.serial_batches = False
@@ -34,7 +35,9 @@ def main():
     args.no_flip = True
 
     model = Room2Reverb(args.encoder_path)
-    model.load_generator(torch.load(os.path.join(args.checkpoints_dir, "latest_net_G.pth")))
+    state_dict = torch.load(os.path.join(args.checkpoints_dir, "%s_net_G.pth" % args.model))
+    state_dict = {k.replace("module.", ""):v for k, v in state_dict.items()}
+    model.load_generator(state_dict)
     
     stft = STFT()
     folder = args.name + "_test"
@@ -54,7 +57,7 @@ def main():
         img_outpath = os.path.join(folder, os.path.basename(img_path)).replace("label", "input") 
         audio_path = os.path.splitext(img_outpath)[0].replace("input", "output") + ".wav"
         shutil.copy2(img_path, img_outpath)
-        soundfile.write(audio_path, audio.detach().cpu().numpy(), args.sr)
+        soundfile.write(audio_path, audio, args.sr)
 
 if __name__ == "__main__":
     main()

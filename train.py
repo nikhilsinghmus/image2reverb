@@ -19,13 +19,14 @@ def main():
     parser.add_argument("--checkpoints_dir", type=str, default="./checkpoints", help="Model location.")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size.")
     parser.add_argument("--encoder_path", type=str, default="resnet50_places365.pth.tar", help="Path to pre-trained Encoder ResNet50 model.")
-    parser.add_argument("--n_epochs", type=int, default=200, help="Number of training epochs.")
     parser.add_argument("--dataset", type=str, default="room2reverb", help="Name of dataset located in the dataset folder.")
     parser.add_argument("--print_freq", type=int, default=100, help="Frequency of showing training results on console.")
     parser.add_argument("--niter", type=int, default=200, help="Number of training iters.")
     parser.add_argument("--save_latest_freq", type=int, default=1000, help="Frequency of saving the latest results.")
     parser.add_argument("--save_epoch_freq", type=int, default=10, help="Frequency of saving checkpoints at end of epochs.")
     parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
+    parser.add_argument("--from_pretrained", type=str, default=None, help="Path to pretrained model.")
+    parser.add_argument("--spectrogram", type=str, default="mel", help="Path to pretrained model.")
     args = parser.parse_args()
 
     print_freq = lcm(args.print_freq, args.batch_size)
@@ -39,6 +40,7 @@ def main():
     args.loadSize = 512
     args.fineSize = 224
     args.no_flip = True
+    args.gpu_ids = list(map(int, args.gpu_ids.split(",")))
     data_loader = CreateDataLoader(args)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
@@ -50,10 +52,24 @@ def main():
         os.makedirs(folder)
 
     # Main model
+    n = 0
     model = Room2Reverb(args.encoder_path)
+    if args.from_pretrained:
+        g = torch.load(os.path.join(args.checkpoints_dir, "%s_net_G.pth" % args.from_pretrained))
+        g = {k.replace("module.", ""):v for k, v in g.items()}
+        model.load_generator(g)
+        d = torch.load(os.path.join(args.checkpoints_dir, "%s_net_D.pth" % args.from_pretrained))
+        d = {k.replace("module.", ""):v for k, v in d.items()}
+        model.load_discriminator(d)
+        n = int(args.from_pretrained) if args.from_pretrained != "latest" else 0
+        args.niter += n
+    if len(args.gpu_ids) > 1:
+        model.enc = torch.nn.DataParallel(model.enc, device_ids=args.gpu_ids)
+        model.g = torch.nn.DataParallel(model.g, device_ids=args.gpu_ids)
+        model.d = torch.nn.DataParallel(model.d, device_ids=args.gpu_ids)
 
     # Train settings
-    start_epoch, epoch_iter = 1, 0
+    start_epoch, epoch_iter = 1 + n, 0
     total_steps = (start_epoch - 1) * dataset_size + epoch_iter
     print_delta = total_steps % args.print_freq
     save_delta = total_steps % args.save_latest_freq
@@ -87,6 +103,7 @@ def main():
                 print("saving the latest model (epoch %d, total_steps %d)" % (epoch, total_steps))
                 save_network(model.g, "G", "latest", folder)
                 save_network(model.d, "D", "latest", folder)
+                save_network(model.enc, "E", "latest", folder)
 
             if epoch_iter >= dataset_size:
                 break
@@ -98,8 +115,10 @@ def main():
             print("saving the model at the end of epoch %d, iters %d" % (epoch, total_steps))
             save_network(model.g, "G", "latest", folder)
             save_network(model.d, "D", "latest", folder)
+            save_network(model.enc, "E", "latest", folder)
             save_network(model.g, "G", epoch, folder)
             save_network(model.d, "D", epoch, folder)
+            save_network(model.enc, "E", epoch, folder)
 
 
 
