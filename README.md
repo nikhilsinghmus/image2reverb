@@ -1,11 +1,11 @@
 # room2reverb
 
 
-room2reverb is a deep neural net model that directly synthesizes IRs from visual images of acoustic environments.
+room2reverb is a deep neural net model that directly synthesizes impulse responses (IRs) from visual images of acoustic environments.
 
 ![room2reverb architecture](/readme/r2rarch.png)
 
-The architecture is a conditional GAN built using PyTorch and using ResNet50 (pre-trainedon Places365) as an encoder. room2reverb is a fully  end-to-end acoustic impulse response generator currently being developed as part of the Applied Machine Learning course 6.862 at MIT.
+The architecture is a conditional GAN built using PyTorch and using ResNet50 (pre-trained on Places365) as an encoder. room2reverb is a fully end-to-end acoustic impulse response generator currently being developed as a project in the Applied Machine Learning course 6.862 at MIT.
 
 ## Dependencies
 
