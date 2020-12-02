@@ -10,6 +10,9 @@ nohup*
 *.tar
 room2reverb_test*/
 *.txt
+*.npy
+*.joblib
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

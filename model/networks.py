@@ -18,16 +18,16 @@ class Identity(nn.Module):
 
 class Encoder(nn.Module):
     """Load encoder from pre-trained ResNet50 (places365 CNNs) model. Link: http://places2.csail.mit.edu/models_places365/resnet50_places365.pth.tar"""
-    def __init__(self, model_weights, output_dimension=365):
+    def __init__(self, model_weights, output_dimension=365, device="cuda"):
         super().__init__()
         self.model_weights = model_weights
         self.model = models.resnet50(num_classes=365)
-        c = torch.load(model_weights)
+        c = torch.load(model_weights, map_location=device)
         state_dict = {k.replace("module.", ""): v for k, v in c["state_dict"].items()}
         self.model.load_state_dict(state_dict)
         if output_dimension == 2048:
             self.model.fc = Identity()
-        self.model.to(torch.device("cuda"))
+        self.model.to(torch.device(device))
         self.model.eval()
 
     def forward(self, x):
