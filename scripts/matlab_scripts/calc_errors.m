@@ -13,7 +13,7 @@ n_items = length(listing);
 compare_tables = {};
 
 for i = 1:n_items
-    if listing(i).isdir && (length(listing(i).name) > 3) && ~strcmp(listing(i).name,'test_B')
+    if listing(i).isdir && (length(listing(i).name) > 3) && ~strcmp(listing(i).name,'gtest_B')
         compare_tables = vertcat(compare_tables, {listing(i).name, {data(ismember(data.SourceFolder,listing(i).name),:)}});
     end
 end
@@ -73,4 +73,24 @@ writecell(A, filename,'FileType','text','WriteMode','overwrite');
 for i = 1:length(error_struct)
     A = {error_struct{i}.name, error_struct{i}.mae, error_struct{i}.max, error_struct{i}.min, error_struct{i}.median};
     writecell(A, filename,'FileType','text','WriteMode','append');
+end
+%%
+%Create histograms of errors for each folder
+characteristics = {'T60','DRR','CTE','EDT'};
+listing = dir('char_dist');
+name_vec = {listing.name};
+for i = 1:length(error_struct)
+    if(~any(strcmp(error_struct{i}.name,name_vec)))
+        mkdir(['char_dist/',error_struct{i}.name]);
+    end
+    err_size = size(error_struct{i}.errors);
+    for j = 1:err_size(2)
+        histfig = figure
+        hist(error_struct{i}.errors(:,j),100);
+        title(append([strrep(error_struct{i}.name,'_', ' '),' , ', characteristics{j}]));
+        xlabel('Error')
+        ylabel('Count')
+        saveas(histfig,['char_dist/' , error_struct{i}.name , '/' , characteristics{j},'.png']);
+        close all
+    end
 end
