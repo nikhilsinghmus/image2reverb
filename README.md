@@ -9,9 +9,25 @@ The architecture is a conditional GAN built using PyTorch and using ResNet50 (pr
 
 ## Dependencies
 
-PyTorch (including torchvision, torchaudio), librosa, PIL
+**Model/Data:**
 
-Matlab is required to run the custom scripts used for calculating metrics and statistics of generated IRs, but not for the model itself. Additionally, PySoundfile, SciPy, python-acoustics, google-images-download, and matplotlib are used in some cases for data pre-processing and eval scripts.
+* PyTorch>=1.7.0
+* torchvision
+* torchaudio
+* librosa
+* PIL
+
+**Eval/Preprocessing:**
+
+* PySoundfile
+* SciPy
+* Scikit-Learn
+* python-acoustics
+* google-images-download
+* matplotlib
+
+
+Matlab (with the [IoSR Matlab Toolbox](https://github.com/IoSR-Surrey/MatlabToolbox)) is required to run the custom scripts used for calculating metrics and statistics of generated IRs, but not for the model itself.
 
 ## Usage
 
