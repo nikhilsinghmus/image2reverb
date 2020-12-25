@@ -1,31 +1,21 @@
 import numpy
 import torch
-import torchvision.transforms
 import librosa
 
 
-M_PI = 3.1415926535897932384626433832795018841971693993751058
-
-
-class STFT(torch.nn.Module):
-    def __init__(self, window_size=1024, hop_length=256, window="hann"):
+class LogMel(torch.nn.Module):
+    def __init__(self):
         super().__init__()
-        self._w_size = window_size
-        self._h_length = hop_length
-
-        # STFT parameters
-        d = {"hann": torch.hann_window}
-        self._w = d[window](self._w_size) # Window table
-        self._n = torchvision.transforms.Normalize(6, 8).cuda()
+        self._eps = 1e-8
 
     def transform(self, audio):
-        s = torch.stft(torch.Tensor(audio), self._w_size, self._h_length, window=self._w, return_complex=True).squeeze()[:-1,:] # Get STFT and trim Nyquist bin
-        return self._n(torch.abs(s.unsqueeze(0))) # Magnitude
+        m = numpy.abs(librosa.stft(audio/numpy.abs(audio).max()))[:-1,:]
+        m = numpy.log(m + self._eps)
+        m = (((m - m.min())/(m.max() - m.min()) * 2) - 1)
+        return torch.Tensor(m * 0.8).unsqueeze(0)
 
     def inverse(self, spec):
-        s = torch.cat((spec, torch.zeros(1, spec.shape[1]).cuda()))
-        s = (s * self._n.std) + self._n.mean
-        random_phase = torch.Tensor(s.shape).uniform_(-M_PI, M_PI).cuda()
-        f = s * (torch.cos(random_phase) + (1.j * torch.sin(random_phase)))
-        audio = torch.istft(f, self._w_size, self._h_length, window=self._w.cuda()) # Audio output
-        return audio/torch.abs(audio).max()
+        s = spec.cpu().detach().numpy()
+        s = numpy.exp((((s + 1) * 0.5) * 19.5) - 17.5) - self._eps # Empirical (average) min and max over test set
+        y = librosa.istft(s) # Reconstruct audio
+        return y/numpy.abs(y).max()
