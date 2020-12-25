@@ -13,6 +13,8 @@ room2reverb_test*/
 *.npy
 *.joblib
 tmp/
+*.jpg
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
