@@ -3,7 +3,7 @@ import torch
 import librosa
 
 
-class LogMel(torch.nn.Module):
+class STFT(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self._eps = 1e-8
