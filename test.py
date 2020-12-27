@@ -6,6 +6,7 @@ import soundfile
 from collections import OrderedDict
 from model import util
 from model.stft import STFT
+from model.mel import LogMel
 from model.data_loader import CreateDataLoader
 from model.model import Room2Reverb
 
@@ -22,6 +23,7 @@ def main():
     parser.add_argument("--n_test", type=int, default=100, help="Number of test examples.")
     parser.add_argument("--sr", type=int, default=22050, help="Sample rate of output.")
     parser.add_argument("--model", type=str, default="latest", help="Which model/checkpoint to load.")
+    parser.add_argument("--spectrogram", type=str, default="stft", help="Spectrogram type.")
     args = parser.parse_args()
     args.batchSize = args.batch_size
     args.serial_batches = False
@@ -39,7 +41,7 @@ def main():
     state_dict = {k.replace("module.", ""):v for k, v in state_dict.items()}
     model.load_generator(state_dict)
     
-    stft = STFT()
+    stft = LogMel() if args.spectrogram == "mel" else STFT()
     folder = args.name + "_test"
     if not os.path.isdir(folder):
         os.makedirs(folder)

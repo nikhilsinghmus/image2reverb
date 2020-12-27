@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--save_epoch_freq", type=int, default=10, help="Frequency of saving checkpoints at end of epochs.")
     parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
     parser.add_argument("--from_pretrained", type=str, default=None, help="Path to pretrained model.")
-    parser.add_argument("--spectrogram", type=str, default="mel", help="Path to pretrained model.")
+    parser.add_argument("--spectrogram", type=str, default="stft", help="Spectrogram type.")
     args = parser.parse_args()
 
     print_freq = lcm(args.print_freq, args.batch_size)
@@ -89,7 +89,7 @@ def main():
             # Model training
             label = data["label"].cuda()
             spec = data["image"].cuda()
-            model.train_step(spec, label, (i % 3) == 0)
+            model.train_step(spec, label)
 
             # Print progress
             if (total_steps % args.print_freq) == print_delta:
