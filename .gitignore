@@ -15,6 +15,7 @@ room2reverb_test*/
 tmp/
 *.jpg
 *.png
+*.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
