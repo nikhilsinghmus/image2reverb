@@ -29,7 +29,7 @@ def main():
     args.serial_batches = False
     args.nThreads = 2
     args.max_dataset_size = float("inf")
-    args.dataroot = os.path.join("./datasets", args.name)
+    args.dataroot = os.path.join("./datasets", args.dataset)
     args.phase = "test"
     args.isTrain = True
     args.loadSize = 512
