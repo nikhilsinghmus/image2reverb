@@ -40,7 +40,7 @@ class Room2Reverb:
         spec.requires_grad = True # For the backward pass, seems necessary for now
         
         # Forward passes through models
-        f = self.enc.forward(label).cuda().detach()
+        f, _ = self.enc(label).cuda().detach()
         z = torch.randn((f.shape[0], self._latent_dimension - f.shape[1], f.shape[2], f.shape[3])).cuda()
         fake_spec = self.g(torch.cat((f, z), 1))
         d_fake = self.d(fake_spec.detach(), f)

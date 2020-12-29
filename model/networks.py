@@ -43,7 +43,7 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         x = torch.cat((x, list(self.depth_decoder(self.depth_encoder(x)).values())[-1]), 1)
-        return self.model.forward(x).unsqueeze(-1).unsqueeze(-1)
+        return self.model.forward(x).unsqueeze(-1).unsqueeze(-1), x
 
 
 class Generator(nn.Module):
