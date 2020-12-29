@@ -74,5 +74,5 @@ class Room2Reverb:
         self.d.load_state_dict(path)
     
     def inference(self, img): # Generate output
-        f = self.enc.forward(img).cuda()
+        f, _ = self.enc.forward(img).cuda()
         return self.g(torch.cat((f, torch.randn((f.shape[0], (512 - f.shape[1]) if f.shape[1] < 512 else f.shape[1], f.shape[2], f.shape[3])).cuda()), 1))
