@@ -15,9 +15,12 @@ def main():
     for f in files:
         print(f)
         f_input = os.path.join(input_dir, os.path.basename(f.replace("output", "img")))
-        t60_d, a, b = compare_t60(f, f_input)
-        print("%.2f%%: ================> %.2fs %.2fs" % (t60_d * 100, a, b))
-        t60_mae.append(t60_d)
+        try:
+            t60_d, a, b = compare_t60(f, f_input)
+            print("%.2f%%: ================> %.2fs %.2fs" % (t60_d * 100, a, b))
+            t60_mae.append(t60_d)
+        except:
+            print("Error.")
     numpy.save("t60", t60_mae)
     print(scipy.stats.describe(t60_mae))
 
