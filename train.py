@@ -25,7 +25,7 @@ def main():
     parser.add_argument("--niter", type=int, default=200, help="Number of training iters.")
     parser.add_argument("--save_latest_freq", type=int, default=1000, help="Frequency of saving the latest results.")
     parser.add_argument("--save_epoch_freq", type=int, default=10, help="Frequency of saving checkpoints at end of epochs.")
-    parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
+    parser.add_argument("--resize_or_crop", type=str, default="scale_width", help="Scaling and cropping of images at load time.")
     parser.add_argument("--from_pretrained", type=str, default=None, help="Path to pretrained model.")
     parser.add_argument("--spectrogram", type=str, default="stft", help="Spectrogram type.")
     args = parser.parse_args()
@@ -38,7 +38,7 @@ def main():
     args.dataroot = os.path.join("./datasets", args.dataset)
     args.phase = "train"
     args.isTrain = True
-    args.loadSize = 512
+    args.loadSize = 224
     args.fineSize = 224
     args.no_flip = True
     args.gpu_ids = list(map(int, args.gpu_ids.split(",")))

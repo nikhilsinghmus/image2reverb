@@ -20,7 +20,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size.")
     parser.add_argument("--encoder_path", type=str, default="resnet50_places365.pth.tar", help="Path to pre-trained Encoder ResNet50 model.")
     parser.add_argument("--dataset", type=str, default="room2reverb", help="Name of dataset located in the dataset folder.")
-    parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
+    parser.add_argument("--resize_or_crop", type=str, default="scale_width", help="Scaling and cropping of images at load time.")
     parser.add_argument("--n_test", type=int, default=100, help="Number of test examples.")
     parser.add_argument("--sr", type=int, default=22050, help="Sample rate of output.")
     parser.add_argument("--model", type=str, default="latest", help="Which model/checkpoint to load.")
@@ -32,7 +32,7 @@ def main():
     args.dataroot = os.path.join("./datasets", args.dataset)
     args.phase = "test"
     args.isTrain = True
-    args.loadSize = 512
+    args.loadSize = 224
     args.fineSize = 224
     args.no_flip = True
 

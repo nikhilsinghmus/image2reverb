@@ -21,7 +21,7 @@ def main():
     args.dataroot = "../datasets/room2reverb/"
     args.phase = "test"
     args.isTrain = True
-    args.loadSize = 512
+    args.loadSize = 224
     args.fineSize = 224
     args.no_flip = True
 
