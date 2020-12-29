@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--checkpoints_dir", type=str, default="./checkpoints", help="Model location.")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size.")
     parser.add_argument("--encoder_path", type=str, default="resnet50_places365.pth.tar", help="Path to pre-trained Encoder ResNet50 model.")
+    parser.add_argument("--depthmodel_path", type=str, default="mono_odom_640x192", help="Path to pre-trained depth (from monodepth2) encoder and decoder models.")
     parser.add_argument("--dataset", type=str, default="room2reverb", help="Name of dataset located in the dataset folder.")
     parser.add_argument("--resize_or_crop", type=str, default="scale_width_and_crop", help="Scaling and cropping of images at load time.")
     parser.add_argument("--n_test", type=int, default=100, help="Number of test examples.")
@@ -36,7 +37,7 @@ def main():
     args.fineSize = 224
     args.no_flip = True
 
-    model = Room2Reverb(args.encoder_path)
+    model = Room2Reverb(args.encoder_path, args.depthmodel_path)
     state_dict = torch.load(os.path.join(args.checkpoints_dir, "%s_net_G.pth" % args.model))
     state_dict = {k.replace("module.", ""):v for k, v in state_dict.items()}
     model.load_generator(state_dict)

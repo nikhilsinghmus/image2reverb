@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--checkpoints_dir", type=str, default="./checkpoints", help="Model location.")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size.")
     parser.add_argument("--encoder_path", type=str, default="resnet50_places365.pth.tar", help="Path to pre-trained Encoder ResNet50 model.")
+    parser.add_argument("--depthmodel_path", type=str, default="mono_odom_640x192", help="Path to pre-trained depth (from monodepth2) encoder and decoder models.")
     parser.add_argument("--dataset", type=str, default="room2reverb", help="Name of dataset located in the dataset folder.")
     parser.add_argument("--print_freq", type=int, default=100, help="Frequency of showing training results on console.")
     parser.add_argument("--niter", type=int, default=200, help="Number of training iters.")
@@ -53,7 +54,7 @@ def main():
 
     # Main model
     n = 0
-    model = Room2Reverb(args.encoder_path)
+    model = Room2Reverb(args.encoder_path, args.depthmodel_path)
     if args.from_pretrained:
         g = torch.load(os.path.join(args.checkpoints_dir, "%s_net_G.pth" % args.from_pretrained))
         g = {k.replace("module.", ""):v for k, v in g.items()}

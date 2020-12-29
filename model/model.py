@@ -13,9 +13,10 @@ LAMBDA = 100
 
 
 class Room2Reverb:
-    def __init__(self, encoder_path, latent_dimension=512):
+    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512):
         """GAN model class, puts everything together."""
         self._encoder_path = encoder_path
+        self._depthmodel_path = depthmodel_path
         self._latent_dimension = latent_dimension
         self._init_network()
         self._init_optimizer()
@@ -23,7 +24,7 @@ class Room2Reverb:
         self._criterion_extra = torch.nn.L1Loss().cuda()
 
     def _init_network(self): # Initialize networks
-        self.enc = Encoder(self._encoder_path)
+        self.enc = Encoder(self._encoder_path, self._depthmodel_path)
         self.g = Generator()
         self.d = Discriminator()
         self.g.cuda()
