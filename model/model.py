@@ -33,7 +33,8 @@ class Room2Reverb:
     def _init_optimizer(self): # Initialize optimizers
         self.g_optim = torch.optim.Adam(self.g.model.parameters(), lr=G_LR, betas=ADAM_BETA, eps=ADAM_EPS)
         self.d_optim = torch.optim.Adam(self.d.model.parameters(), lr=D_LR, betas=ADAM_BETA, eps=ADAM_EPS)
-        self.enc_optim = torch.optim.Adam(self.enc.model.parameters(), lr=G_LR, betas=ADAM_BETA, eps=ADAM_EPS)
+        enc_params = list(self.enc.model.parameters()) + list(self.enc.depth_encoder.parameters()) + list(self.enc.depth_decoder.parameters())
+        self.enc_optim = torch.optim.Adam(enc_params, lr=G_LR, betas=ADAM_BETA, eps=ADAM_EPS)
 
     def train_step(self, spec, label):
         """Perform one training step."""
