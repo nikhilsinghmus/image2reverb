@@ -7,6 +7,7 @@ from .util import estimate_t60
 # Hyperparameters
 G_LR = 2e-4
 D_LR = 4e-4
+ENC_LR = 1e-5
 ADAM_BETA = (0.0, 0.99)
 ADAM_EPS = 1e-8
 LAMBDA = 100
@@ -34,14 +35,14 @@ class Room2Reverb:
         self.g_optim = torch.optim.Adam(self.g.model.parameters(), lr=G_LR, betas=ADAM_BETA, eps=ADAM_EPS)
         self.d_optim = torch.optim.Adam(self.d.model.parameters(), lr=D_LR, betas=ADAM_BETA, eps=ADAM_EPS)
         enc_params = list(self.enc.model.parameters()) + list(self.enc.depth_encoder.parameters()) + list(self.enc.depth_decoder.parameters())
-        self.enc_optim = torch.optim.Adam(enc_params, lr=G_LR, betas=ADAM_BETA, eps=ADAM_EPS)
+        self.enc_optim = torch.optim.Adam(enc_params, lr=ENC_LR, betas=ADAM_BETA, eps=ADAM_EPS)
 
     def train_step(self, spec, label):
         """Perform one training step."""
         spec.requires_grad = True # For the backward pass, seems necessary for now
         
         # Forward passes through models
-        f, _ = self.enc(label).cuda().detach()
+        f = self.enc(label)[0].cuda().detach()
         z = torch.randn((f.shape[0], self._latent_dimension - f.shape[1], f.shape[2], f.shape[3])).cuda()
         fake_spec = self.g(torch.cat((f, z), 1))
         d_fake = self.d(fake_spec.detach(), f)
@@ -75,5 +76,5 @@ class Room2Reverb:
         self.d.load_state_dict(path)
     
     def inference(self, img): # Generate output
-        f, _ = self.enc.forward(img).cuda()
+        f = self.enc.forward(img)[0].cuda()
         return self.g(torch.cat((f, torch.randn((f.shape[0], (512 - f.shape[1]) if f.shape[1] < 512 else f.shape[1], f.shape[2], f.shape[3])).cuda()), 1))
