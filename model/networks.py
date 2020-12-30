@@ -33,13 +33,13 @@ class Encoder(nn.Module):
         filtered_dict_enc = {k: v for k, v in loaded_dict_enc.items() if k in self.depth_encoder.state_dict()}
         self.depth_encoder.load_state_dict(filtered_dict_enc)
         self.depth_encoder.to(device)
-        self.depth_encoder.train()
+        self.depth_encoder.eval()
 
         self.depth_decoder = DepthDecoder(num_ch_enc=self.depth_encoder.num_ch_enc, scales=range(4))
         loaded_dict = torch.load(depth_decoder_path, map_location=device)
         self.depth_decoder.load_state_dict(loaded_dict, strict=False)
         self.depth_decoder.to(device)
-        self.depth_decoder.train()
+        self.depth_decoder.eval()
 
     def forward(self, x):
         x = torch.cat((x, list(self.depth_decoder(self.depth_encoder(x)).values())[-1]), 1)

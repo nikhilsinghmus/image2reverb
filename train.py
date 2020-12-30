@@ -105,8 +105,6 @@ def main():
                 save_network(model.g, "G", "latest", folder)
                 save_network(model.d, "D", "latest", folder)
                 save_network(model.enc, "E", "latest", folder)
-                save_network(model.enc.depth_encoder, "DepthE", "latest", folder)
-                save_network(model.enc.depth_decoder, "DepthD", "latest", folder)
 
             if epoch_iter >= dataset_size:
                 break
@@ -119,13 +117,9 @@ def main():
             save_network(model.g, "G", "latest", folder)
             save_network(model.d, "D", "latest", folder)
             save_network(model.enc, "E", "latest", folder)
-            save_network(model.enc.depth_encoder, "DepthE", "latest", folder)
-            save_network(model.enc.depth_decoder, "DepthD", "latest", folder)
             save_network(model.g, "G", epoch, folder)
             save_network(model.d, "D", epoch, folder)
             save_network(model.enc, "E", epoch, folder)
-            save_network(model.enc.depth_encoder, "DepthE", epoch, folder)
-            save_network(model.enc.depth_decoder, "DepthD", epoch, folder)
 
 
 
