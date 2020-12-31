@@ -1,3 +1,4 @@
+import os
 import numpy
 import torch
 from torch import nn
@@ -11,8 +12,8 @@ from .mel import LogMel
 
 
 # Hyperparameters
-G_LR = 2e-4
-D_LR = 4e-4
+G_LR = 4e-4
+D_LR = 2e-4
 ENC_LR = 1e-5
 ADAM_BETA = (0.0, 0.99)
 ADAM_EPS = 1e-8
@@ -20,11 +21,12 @@ LAMBDA = 100
 
 
 class Image2Reverb(pl.LightningModule):
-    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, opt=False):
+    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, test_callback=None):
         super().__init__()
         self._latent_dimension = latent_dimension
         self._d_threshold = d_threshold
-        self._opt = opt
+        self.test_callback = test_callback
+        self._opt = not self.automatic_optimization
         self.enc = Encoder(encoder_path, depthmodel_path, device=self.device)
         self.g = Generator(latent_dimension, spec == "mel")
         self.d = Discriminator(365, spec == "mel")
@@ -88,7 +90,8 @@ class Image2Reverb(pl.LightningModule):
         return [enc_optim, g_optim, d_optim], []
     
     def validation_step(self, batch, batch_idx):
-        spec, label, _ = batch
+        spec, label, paths = batch
+        examples = [os.path.basename(s[:s.rfind("_")]) for s, _ in zip(*paths)]
         
         # Forward passes through models
         f = self.enc.forward(label)[0]
@@ -110,12 +113,76 @@ class Image2Reverb(pl.LightningModule):
         except:
             pass
 
-        return {"val_t60err": val_pct, "val_spec": fake_spec}
+        return {"val_t60err": val_pct, "val_spec": fake_spec, "val_audio": torch.Tensor(y_f), "val_img": label, "val_examples": examples}
     
     def validation_epoch_end(self, outputs):
         if not len(outputs):
             return
+        # Log mean T60 errors (in percentages)
         val_t60errmean = torch.Tensor([output["val_t60err"] for output in outputs]).mean()
-        grid = torchvision.utils.make_grid([x for y in [output["val_spec"] for output in outputs] for x in y])
-        self.logger.experiment.add_image("generated_spectrograms", grid, self.current_epoch)
         self.log("val_t60err", val_t60errmean, on_epoch=True, prog_bar=True)
+
+        # Log generated spectrogram images
+        grid = torchvision.utils.make_grid([torch.flip(x, [0]) for y in [output["val_spec"] for output in outputs] for x in y])
+        self.logger.experiment.add_image("generated_spectrograms", grid, self.current_epoch)
+
+        # Log model input images
+        grid = torchvision.utils.make_grid([x for y in [output["val_img"] for output in outputs] for x in y])
+        self.logger.experiment.add_image("input_images_with_depthmaps", grid, self.current_epoch)
+        
+        # Log generated audio examples
+        for output in outputs:
+            for example, audio in zip(output["val_examples"], output["val_audio"]):
+                y = audio.unsqueeze(0)
+                self.logger.experiment.add_audio("generated_audio_%s" % example, y, sample_rate=22050)
+
+    def test_step(self, batch, batch_idx):
+        spec, label, paths = batch
+        examples = [os.path.basename(s[:s.rfind("_")]) for s, _ in zip(*paths)]
+        
+        # Forward passes through models
+        f, img = self.enc.forward(label)
+        img = (img + 1) * 0.5
+        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3]), device=self.device)), 1)
+        fake_spec = self.g(z)
+        
+        # Get audio
+        stft = LogMel() if self.stft_type == "mel" else STFT()
+        y_r = [stft.inverse(s.squeeze()) for s in spec]
+        y_f = [stft.inverse(s.squeeze()) for s in fake_spec]
+
+        # RT60 error (in percentages)
+        val_pct = 1
+        f = pyroomacoustics.experimental.rt60.measure_rt60
+        val_pct = []
+        for y_real, y_fake in zip(y_r, y_f):
+            try:
+                t_a = f(y_real)
+                t_b = f(y_fake)
+                val_pct.append((t_b - t_a)/t_a)
+            except:
+                val_pct.append(numpy.nan)
+
+        return {"test_t60err": val_pct, "test_spec": fake_spec, "test_audio": y_f, "test_img": img, "test_examples": examples}
+    
+    def test_epoch_end(self, outputs):
+        if not self.test_callback:
+            return
+            
+        examples = []
+        t60 = []
+        spec_images = []
+        audio = []
+        input_images = []
+        input_depthmaps = []
+
+        for output in outputs:
+            for i in range(len(output["test_examples"])):
+                t60.append(output["test_t60err"][i])
+                spec_images.append(output["test_spec"][i].cpu().squeeze().detach().numpy())
+                audio.append(output["test_audio"][i])
+                input_images.append(output["test_img"][i].cpu().squeeze().permute(1, 2, 0)[:,:,:-1].detach().numpy())
+                input_depthmaps.append(output["test_img"][i].cpu().squeeze().permute(1, 2, 0)[:,:,-1].squeeze().detach().numpy())
+                examples.append(output["test_examples"][i])
+        
+        self.test_callback(examples, t60, spec_images, audio, input_images, input_depthmaps)
