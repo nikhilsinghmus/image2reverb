@@ -2,6 +2,7 @@ import os
 import argparse
 import torch
 from pytorch_lightning import Trainer, loggers
+from pytorch_lightning.callbacks import ModelCheckpoint
 from image2reverb.model import Image2Reverb
 from image2reverb.dataset import Image2ReverbDataset
 
@@ -17,6 +18,7 @@ def main():
     parser.add_argument("--niter", type=int, default=200, help="Number of training iters.")
     parser.add_argument("--from_pretrained", type=str, default=None, help="Path to pretrained model.")
     parser.add_argument("--spectrogram", type=str, default="stft", help="Spectrogram type.")
+    parser.add_argument("--d_threshold", type=int, default=None, help="Value over which discriminator weights will be updated by optimizer.")
     args = parser.parse_args()
 
     # Model dir
@@ -32,8 +34,32 @@ def main():
     val_dataset = torch.utils.data.DataLoader(val_set, num_workers=8, batch_size=args.batch_size) # For now, to test
 
     # Main model
-    model = Image2Reverb(args.encoder_path, args.depthmodel_path)
-    trainer = Trainer(gpus=args.n_gpus if cuda else None, accelerator="ddp" if cuda else None, auto_scale_batch_size="binsearch", benchmark=True, limit_val_batches=0.25, max_epochs=args.niter, resume_from_checkpoint=args.from_pretrained, weights_save_path=args.checkpoints_dir, default_root_dir=args.checkpoints_dir, num_sanity_val_steps=0)
+    model = Image2Reverb(args.encoder_path, args.depthmodel_path, d_threshold=args.d_threshold)
+    if args.d_threshold:
+        model.automatic_optimization = False
+    
+    # Model training
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=args.checkpoints_dir,
+        filename="image2reverb_{epoch:04d}",
+        save_last=True,
+        period=10,
+        verbose=True
+    )
+    
+    trainer = Trainer(
+        gpus=args.n_gpus if cuda else None,
+        auto_select_gpus=True,
+        accelerator="ddp" if cuda else None,
+        auto_scale_batch_size="binsearch",
+        benchmark=True,
+        limit_val_batches=0.25,
+        max_epochs=args.niter,
+        resume_from_checkpoint=args.from_pretrained,
+        default_root_dir=args.checkpoints_dir,
+        num_sanity_val_steps=0,
+        callbacks=[checkpoint_callback]
+    )
     trainer.fit(model, train_dataset, val_dataset)
 
 
