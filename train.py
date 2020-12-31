@@ -17,20 +17,24 @@ def main():
     parser.add_argument("--niter", type=int, default=200, help="Number of training iters.")
     parser.add_argument("--from_pretrained", type=str, default=None, help="Path to pretrained model.")
     parser.add_argument("--spectrogram", type=str, default="stft", help="Spectrogram type.")
+    parser.add_argument("--precision", type=int, default=32, help="Training precision.")
     args = parser.parse_args()
 
     # Model dir
     folder = args.checkpoints_dir
     if not os.path.isdir(folder):
         os.makedirs(folder)
-    
-    train_dataset = torch.utils.data.DataLoader(Image2ReverbDataset(args.dataset, "train", args.spectrogram), shuffle=True, num_workers=4)
-    val_dataset = torch.utils.data.DataLoader(Image2ReverbDataset(args.dataset, "test", args.spectrogram), num_workers=4) # For now, to test
+
+    cuda = torch.cuda.is_available()
+    train_set = Image2ReverbDataset(args.dataset, "train", args.spectrogram)
+    val_set = Image2ReverbDataset(args.dataset, "test", args.spectrogram)
+
+    train_dataset = torch.utils.data.DataLoader(train_set, shuffle=True, num_workers=8, pin_memory=cuda, batch_size=args.batch_size)
+    val_dataset = torch.utils.data.DataLoader(val_set, num_workers=8, batch_size=args.batch_size) # For now, to test
 
     # Main model
-    cuda = torch.cuda.is_available()
     model = Image2Reverb(args.encoder_path, args.depthmodel_path)
-    trainer = Trainer(gpus=args.n_gpus if cuda else None, accelerator="dp" if cuda else None, auto_scale_batch_size="binsearch", benchmark=True, limit_val_batches=0.1, max_epochs=args.niter, resume_from_checkpoint=args.from_pretrained, weights_save_path=args.checkpoints_dir, num_sanity_val_steps=0)
+    trainer = Trainer(gpus=args.n_gpus if cuda else None, accelerator="ddp" if cuda else None, auto_scale_batch_size="binsearch", benchmark=True, limit_val_batches=0.25, max_epochs=args.niter, resume_from_checkpoint=args.from_pretrained, weights_save_path=args.checkpoints_dir, num_sanity_val_steps=0, precision=args.precision)
     trainer.fit(model, train_dataset, val_dataset)
 
 

@@ -12,7 +12,7 @@ class STFT(torch.nn.Module):
         m = numpy.abs(librosa.stft(audio/numpy.abs(audio).max(), 1024, 256))[:-1,:]
         m = numpy.log(m + self._eps)
         m = (((m - m.min())/(m.max() - m.min()) * 2) - 1)
-        return torch.Tensor(m * 0.8).unsqueeze(0)
+        return (torch.FloatTensor if torch.cuda.is_available() else torch.Tensor)(m * 0.8).unsqueeze(0)
 
     def inverse(self, spec):
         s = spec.cpu().detach().numpy()

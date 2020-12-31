@@ -25,7 +25,7 @@ class Image2Reverb(pl.LightningModule):
         self._latent_dimension = latent_dimension
         self._d_threshold = d_threshold
         self._opt = opt
-        self.enc = Encoder(encoder_path, depthmodel_path)
+        self.enc = Encoder(encoder_path, depthmodel_path, device=self.device)
         self.g = Generator(latent_dimension, spec == "mel")
         self.d = Discriminator(365, spec == "mel")
         self.validation_inputs = []
@@ -33,7 +33,7 @@ class Image2Reverb(pl.LightningModule):
 
     def forward(self, x):
         f = self.enc.forward(x)[0]
-        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3])).type_as(x)), 1)
+        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3]), device=self.device)), 1)
         return self.g(z)
 
     def training_step(self, batch, batch_idx, optimizer_idx):
@@ -45,8 +45,8 @@ class Image2Reverb(pl.LightningModule):
         spec.requires_grad = True # For the backward pass, seems necessary for now
         
         # Forward passes through models
-        f = self.enc.forward(label)[0].type_as(spec)
-        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3])).type_as(spec)), 1)
+        f = self.enc.forward(label)[0]
+        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3]), device=self.device)), 1)
         fake_spec = self.g(z)
         d_fake = self.d(fake_spec.detach(), f)
         d_real = self.d(spec, f)
@@ -54,7 +54,7 @@ class Image2Reverb(pl.LightningModule):
         # Train Generator or Encoder
         if optimizer_idx == 0 or optimizer_idx == 1:
             d_fake2 = self.d(fake_spec.detach(), f)
-            G_loss1 = F.mse_loss(d_fake2, torch.ones(d_fake2.shape).type_as(spec))
+            G_loss1 = F.mse_loss(d_fake2, torch.ones(d_fake2.shape, device=self.device))
             G_loss2 = F.l1_loss(fake_spec, spec)
             G_loss = G_loss1 + (LAMBDA * G_loss2)
 
@@ -68,8 +68,8 @@ class Image2Reverb(pl.LightningModule):
 
             return G_loss
         else: # Train Discriminator
-            l_fakeD = F.mse_loss(d_fake, torch.zeros(d_fake.shape).type_as(spec))
-            l_realD = F.mse_loss(d_real, torch.ones(d_real.shape).type_as(spec))
+            l_fakeD = F.mse_loss(d_fake, torch.zeros(d_fake.shape, device=self.device))
+            l_realD = F.mse_loss(d_real, torch.ones(d_real.shape, device=self.device))
             D_loss = (l_realD + l_fakeD)
 
             if self._opt and (D_loss > self._d_threshold):
@@ -94,8 +94,8 @@ class Image2Reverb(pl.LightningModule):
         spec.requires_grad = True # For the backward pass, seems necessary for now
         
         # Forward passes through models
-        f = self.enc.forward(label)[0].type_as(spec)
-        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3])).type_as(spec)), 1)
+        f = self.enc.forward(label)[0]
+        z = torch.cat((f, torch.randn((f.shape[0], (self._latent_dimension - f.shape[1]) if f.shape[1] < self._latent_dimension else f.shape[1], f.shape[2], f.shape[3]), device=self.device)), 1)
         fake_spec = self.g(z)
         
         # Get audio

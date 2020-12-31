@@ -12,37 +12,35 @@ class Encoder(nn.Module):
     """Load encoder from pre-trained ResNet50 (places365 CNNs) model. Link: http://places2.csail.mit.edu/models_places365/resnet50_places365.pth.tar"""
     def __init__(self, model_weights, depth_model, device="cuda", train_enc=True):
         super().__init__()
+        self.device = device
         self.model = models.resnet50(num_classes=365)
 
-        if not torch.cuda.is_available():
-            device = "cpu"
-
         if model_weights:
-            c = torch.load(model_weights, map_location=device)
+            c = torch.load(model_weights, map_location=self.device)
             state_dict = {k.replace("module.", ""): v for k, v in c["state_dict"].items()}
             self.model.load_state_dict(state_dict)
         
         if depth_model:
             f = self.model.conv1.weight
             self.model.conv1.weight = torch.nn.Parameter(torch.cat((f, torch.randn(64, 1, 7, 7)), 1))
-            self.model.to(torch.device(device))
+            self.model.to(self.device)
 
             encoder_path = os.path.join(depth_model, "encoder.pth")
             depth_decoder_path = os.path.join(depth_model, "depth.pth")
             self.depth_encoder = ResnetEncoder(18, False)
-            loaded_dict_enc = torch.load(encoder_path, map_location=device)
+            loaded_dict_enc = torch.load(encoder_path, map_location=self.device)
 
             self.feed_height = loaded_dict_enc["height"]
             self.feed_width = loaded_dict_enc["width"]
             filtered_dict_enc = {k: v for k, v in loaded_dict_enc.items() if k in self.depth_encoder.state_dict()}
             self.depth_encoder.load_state_dict(filtered_dict_enc)
-            self.depth_encoder.to(device)
+            self.depth_encoder.to(self.device)
             self.depth_encoder.eval()
 
             self.depth_decoder = DepthDecoder(num_ch_enc=self.depth_encoder.num_ch_enc, scales=range(4))
-            loaded_dict = torch.load(depth_decoder_path, map_location=device)
+            loaded_dict = torch.load(depth_decoder_path, map_location=self.device)
             self.depth_decoder.load_state_dict(loaded_dict, strict=False)
-            self.depth_decoder.to(device)
+            self.depth_decoder.to(self.device)
             self.depth_decoder.eval()
         
         if train_enc:
