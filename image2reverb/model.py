@@ -29,7 +29,7 @@ class Image2Reverb(pl.LightningModule):
         self.g = Generator(latent_dimension, spec == "mel")
         self.d = Discriminator(365, spec == "mel")
         self.validation_inputs = []
-        self.stft = (LogMel if spec == "mel" else STFT)()
+        self.stft_type = spec
 
     def forward(self, x):
         f = self.enc.forward(x)[0]
@@ -63,8 +63,7 @@ class Image2Reverb(pl.LightningModule):
                 opts[optimizer_idx].step()
                 opts[optimizer_idx].zero_grad()
 
-            tqdm_dict = {"G": G_loss}
-            self.log_dict(tqdm_dict)
+            self.log("G", G_loss, on_step=True, on_epoch=True, prog_bar=True)
 
             return G_loss
         else: # Train Discriminator
@@ -77,8 +76,7 @@ class Image2Reverb(pl.LightningModule):
                 opts[optimizer_idx].step()
                 opts[optimizer_idx].zero_grad()
         
-            tqdm_dict = {"D": D_loss}
-            self.log_dict(tqdm_dict)
+            self.log("D", D_loss, on_step=True, on_epoch=True, prog_bar=True)
 
             return D_loss
             
@@ -91,7 +89,6 @@ class Image2Reverb(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         spec, label, _ = batch
-        spec.requires_grad = True # For the backward pass, seems necessary for now
         
         # Forward passes through models
         f = self.enc.forward(label)[0]
@@ -99,21 +96,26 @@ class Image2Reverb(pl.LightningModule):
         fake_spec = self.g(z)
         
         # Get audio
-        y_r = [self.stft.inverse(s) for s in spec]
-        y_f = [self.stft.inverse(s) for s in fake_spec]
+        stft = LogMel() if self.stft_type == "mel" else STFT()
+        y_r = [stft.inverse(s.squeeze()) for s in spec]
+        y_f = [stft.inverse(s.squeeze()) for s in fake_spec]
 
         # RT60 error (in percentages)
-        f = pyroomacoustics.experimental.rt60.measure_rt60
-        t60_r = [f(y) for y in y_r]
-        t60_f = [f(y) for y in y_f]
-        val_pct = numpy.mean([((t_b - t_a)/t_a) for t_a, t_b in zip(t60_r, t60_f)])
+        val_pct = 1
+        try:
+            f = pyroomacoustics.experimental.rt60.measure_rt60
+            t60_r = [f(y) for y in y_r if len(y)]
+            t60_f = [f(y) for y in y_f if len(y)]
+            val_pct = numpy.mean([((t_b - t_a)/t_a) for t_a, t_b in zip(t60_r, t60_f)])
+        except:
+            pass
 
         return {"val_t60err": val_pct, "val_spec": fake_spec}
     
     def validation_epoch_end(self, outputs):
         if not len(outputs):
-            return {}
+            return
         val_t60errmean = torch.Tensor([output["val_t60err"] for output in outputs]).mean()
         grid = torchvision.utils.make_grid([x for y in [output["val_spec"] for output in outputs] for x in y])
         self.logger.experiment.add_image("generated_spectrograms", grid, self.current_epoch)
-        return {"log": {"val_t60err": val_t60errmean, "step": self.current_epoch}}
+        self.log("val_t60err", val_t60errmean, on_epoch=True, prog_bar=True)
