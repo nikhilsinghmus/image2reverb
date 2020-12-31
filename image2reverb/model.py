@@ -106,7 +106,7 @@ class Image2Reverb(pl.LightningModule):
         # RT60 error (in percentages)
         val_pct = 1
         try:
-            f = pyroomacoustics.experimental.rt60.measure_rt60
+            f = lambda x : pyroomacoustics.experimental.rt60.measure_rt60(x, 22050)
             t60_r = [f(y) for y in y_r if len(y)]
             t60_f = [f(y) for y in y_f if len(y)]
             val_pct = numpy.mean([((t_b - t_a)/t_a) for t_a, t_b in zip(t60_r, t60_f)])
@@ -153,7 +153,7 @@ class Image2Reverb(pl.LightningModule):
 
         # RT60 error (in percentages)
         val_pct = 1
-        f = pyroomacoustics.experimental.rt60.measure_rt60
+        f = lambda x : pyroomacoustics.experimental.rt60.measure_rt60(x, 22050)
         val_pct = []
         for y_real, y_fake in zip(y_r, y_f):
             try:

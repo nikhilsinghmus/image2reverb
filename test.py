@@ -49,10 +49,10 @@ def main():
             d = os.path.join(args.test_dir, example)
             if not os.path.isdir(d):
                 os.makedirs(d)
-            pyplot.imsave(os.path.join(d, "spec.png"), spectrograms[i])
-            soundfile.write(os.path.join(d, "%s.wav" % example), audio[i], 22050)
-            pyplot.imsave(os.path.join(d, "input.png"), input_images[i])
-            pyplot.imsave(os.path.join(d, "depth.png"), input_depthmaps[i])
+            # pyplot.imsave(os.path.join(d, "spec.png"), spectrograms[i])
+            # soundfile.write(os.path.join(d, "%s.wav" % example), audio[i], 22050)
+            # pyplot.imsave(os.path.join(d, "input.png"), input_images[i])
+            # pyplot.imsave(os.path.join(d, "depth.png"), input_depthmaps[i])
 
             t60_d[example] = t60[i]
         
