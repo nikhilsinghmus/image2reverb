@@ -14,15 +14,26 @@ from matplotlib import pyplot
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoints_dir", type=str, default="./image2reverb_checkpoints", help="Model location.")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size.")
     parser.add_argument("--encoder_path", type=str, default="resnet50_places365.pth.tar", help="Path to pre-trained Encoder ResNet50 model.")
     parser.add_argument("--depthmodel_path", type=str, default="mono_odom_640x192", help="Path to pre-trained depth (from monodepth2) encoder and decoder models.")
-    parser.add_argument("--dataset", type=str, default="./datasets/room2reverb", help="Dataset path.")
+    parser.add_argument("--dataset", type=str, default="./datasets/image2reverb", help="Dataset path.")
     parser.add_argument("--model", type=str, default=None, help="Path to pretrained model.")
     parser.add_argument("--spectrogram", type=str, default="stft", help="Spectrogram type.")
-    parser.add_argument("--test_dir", type=str, default="image2reverb_test/", help="Dir for test examples.")
+    parser.add_argument("--test_dir", type=str, default=None, help="Dir for test examples.")
+    parser.add_argument("--version", type=str, default=None, help="Experiment version.")
+    parser.add_argument("--no_depth", action="store_true", help="Don't apply the pre-trained depth model.")
+    parser.add_argument("--no_places", action="store_true", help="Don't apply the pre-trained encoder model.")
     args = parser.parse_args()
+
+    if args.no_places:
+        args.encoder_path = None
+
+    if args.no_depth:
+        args.depthmodel_path = None
+
+    if not args.test_dir:
+        args.test_dir = "image2reverb_%stest/" % args.version
 
     # Data loading
     cuda = torch.cuda.is_available()
@@ -66,7 +77,7 @@ def main():
     model.load_state_dict(m["state_dict"])
     
     # Model training
-    trainer = Trainer(gpus=1, default_root_dir=args.checkpoints_dir)
+    trainer = Trainer(gpus=1)
     trainer.test(model, test_dataset)
 
 

@@ -9,6 +9,7 @@ import pyroomacoustics
 from .networks import Encoder, Generator, Discriminator
 from .stft import STFT
 from .mel import LogMel
+from .util import compare_t60
 
 
 # Hyperparameters
@@ -21,12 +22,13 @@ LAMBDA = 100
 
 
 class Image2Reverb(pl.LightningModule):
-    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, test_callback=None):
+    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, t60p=True, test_callback=None):
         super().__init__()
         self._latent_dimension = latent_dimension
         self._d_threshold = d_threshold
+        self.t60p = t60p
         self.test_callback = test_callback
-        self._opt = not self.automatic_optimization
+        self._opt = (d_threshold != None) and (d_threshold > 0) and (d_threshold < 1)
         self.enc = Encoder(encoder_path, depthmodel_path, device=self.device)
         self.g = Generator(latent_dimension, spec == "mel")
         self.d = Discriminator(365, spec == "mel")
@@ -58,7 +60,13 @@ class Image2Reverb(pl.LightningModule):
             d_fake2 = self.d(fake_spec.detach(), f)
             G_loss1 = F.mse_loss(d_fake2, torch.ones(d_fake2.shape, device=self.device))
             G_loss2 = F.l1_loss(fake_spec, spec)
+            
+            
             G_loss = G_loss1 + (LAMBDA * G_loss2)
+            if self.t60p:
+                t60_err = torch.Tensor([compare_t60(torch.exp(a).sum(-2).squeeze(), torch.exp(b).sum(-2).squeeze()) for a, b in zip(spec, fake_spec)]).to(self.device).mean()
+                G_loss += t60_err
+                self.log("t60", t60_err, on_step=True, on_epoch=True, prog_bar=True)
 
             if self._opt:
                 self.manual_backward(G_loss, self.opts[optimizer_idx])
@@ -178,11 +186,19 @@ class Image2Reverb(pl.LightningModule):
 
         for output in outputs:
             for i in range(len(output["test_examples"])):
+                img = output["test_img"][i]
+                if img.shape[0] == 3:
+                    rgb = img
+                    img = torch.cat((rgb, torch.zeros((1, rgb.shape[1], rgb.shape[2]), device=self.device)), 0)
                 t60.append(output["test_t60err"][i])
                 spec_images.append(output["test_spec"][i].cpu().squeeze().detach().numpy())
                 audio.append(output["test_audio"][i])
-                input_images.append(output["test_img"][i].cpu().squeeze().permute(1, 2, 0)[:,:,:-1].detach().numpy())
-                input_depthmaps.append(output["test_img"][i].cpu().squeeze().permute(1, 2, 0)[:,:,-1].squeeze().detach().numpy())
+                input_images.append(img.cpu().squeeze().permute(1, 2, 0)[:,:,:-1].detach().numpy())
+                input_depthmaps.append(img.cpu().squeeze().permute(1, 2, 0)[:,:,-1].squeeze().detach().numpy())
                 examples.append(output["test_examples"][i])
         
         self.test_callback(examples, t60, spec_images, audio, input_images, input_depthmaps)
+    
+    @property
+    def automatic_optimization(self) -> bool:
+        return not self._opt

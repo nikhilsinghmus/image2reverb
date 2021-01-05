@@ -1,36 +1,53 @@
 import os
 import numpy
 import torch
-import torchaudio
 import torch.fft
 from PIL import Image
 
+
+def compare_t60(a, b, sr=86):
+    try:
+        a = a.detach().clone().abs()
+        b = b.detach().clone().abs()
+        a = (a - a.min())/(a.max() - a.min())
+        b = (b - b.min())/(b.max() - b.min())
+        t_a = estimate_t60(a, sr)
+        t_b = estimate_t60(b, sr)
+        return abs((t_b - t_a)/t_a) * 100
+    except Exception as error:
+        return 100
+
+
 def estimate_t60(audio, sr):
-    init = -5.0
-    end = -35.0
+    fs = float(sr)
+    audio = audio.detach().clone()
 
-    audio -= audio.min(1,keepdim=True)[0] # normalize audio to -1:1 because bandpass_biquad clips
-    audio /= audio.max(1,keepdim=True)[0]/2
-    audio -= 1
+    decay_db = 20
 
-    bands = torch.FloatTensor([125, 250, 500, 1000, 2000, 4000])
-    t60 = torch.zeros(bands.shape[0])
+    # The power of the impulse response in dB
+    power = audio ** 2
+    energy = torch.flip(torch.cumsum(torch.flip(power, [0]), 0), [0])  # Integration according to Schroeder
 
-    for band in range(bands.shape[0]):
-        # Filtering signal
-        filtered_signal = torchaudio.functional.bandpass_biquad(audio, sr, bands[band])
-        analytic_signal = torch.abs(hilbert(filtered_signal)) #absolute value of hilbert transform
+    # remove the possibly all zero tail
+    i_nz = torch.max(torch.where(energy > 0)[0])
+    n = energy[:i_nz]
+    db = 10 * torch.log10(n)
+    db = db - db[0]
 
-        # Schroeder integration
-        sch = torch.flip(torch.cumsum(torch.flip(analytic_signal, [0]) ** 2, 0), [0])
-        sch_db = 10.0 * torch.log10(sch / torch.max(sch))
+    # -5 dB headroom
+    i_5db = torch.min(torch.where(-5 - db > 0)[0])
+    e_5db = db[i_5db]
+    t_5db = i_5db / fs
 
-        sch_init = sch_db[0,torch.abs(sch_db - init).argmin()]
-        sch_end = sch_db[0,torch.abs(sch_db - end).argmin()]
-        init_sample = torch.where(sch_db == sch_init)[1][0]
-        end_sample = torch.where(sch_db == sch_end)[1][0]
-        t60[band] = 2 * (end_sample - init_sample)
-    return t60
+    # after decay
+    i_decay = torch.min(torch.where(-5 - decay_db - db > 0)[0])
+    t_decay = i_decay / fs
+
+    # compute the decay time
+    decay_time = t_decay - t_5db
+    est_rt60 = (60 / decay_db) * decay_time
+
+    return est_rt60
 
 def hilbert(x): #hilbert transform
     N = x.shape[1]

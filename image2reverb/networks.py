@@ -20,6 +20,7 @@ class Encoder(nn.Module):
             state_dict = {k.replace("module.", ""): v for k, v in c["state_dict"].items()}
             self.model.load_state_dict(state_dict)
         
+        self._has_depth = False
         if depth_model:
             f = self.model.conv1.weight
             self.model.conv1.weight = torch.nn.Parameter(torch.cat((f, torch.randn(64, 1, 7, 7)), 1))
@@ -42,12 +43,15 @@ class Encoder(nn.Module):
             self.depth_decoder.load_state_dict(loaded_dict, strict=False)
             self.depth_decoder.to(self.device)
             self.depth_decoder.eval()
+
+            self._has_depth = True
         
         if train_enc:
             self.model.train()
 
     def forward(self, x):
-        x = torch.cat((x, list(self.depth_decoder(self.depth_encoder(x)).values())[-1]), 1)
+        if self._has_depth:
+            x = torch.cat((x, list(self.depth_decoder(self.depth_encoder(x)).values())[-1]), 1)
         return self.model.forward(x).unsqueeze(-1).unsqueeze(-1), x
 
 
