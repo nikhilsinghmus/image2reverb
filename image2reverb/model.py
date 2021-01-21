@@ -22,14 +22,15 @@ LAMBDA = 100
 
 
 class Image2Reverb(pl.LightningModule):
-    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, t60p=True, test_callback=None):
+    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, t60p=True, constant_depth = None, test_callback=None):
         super().__init__()
         self._latent_dimension = latent_dimension
         self._d_threshold = d_threshold
+        self.constant_depth = constant_depth
         self.t60p = t60p
         self.test_callback = test_callback
         self._opt = (d_threshold != None) and (d_threshold > 0) and (d_threshold < 1)
-        self.enc = Encoder(encoder_path, depthmodel_path, device=self.device)
+        self.enc = Encoder(encoder_path, depthmodel_path, constant_depth=self.constant_depth, device=self.device)
         self.g = Generator(latent_dimension, spec == "mel")
         self.d = Discriminator(365, spec == "mel")
         self.validation_inputs = []

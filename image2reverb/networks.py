@@ -10,9 +10,10 @@ from .layers import PixelWiseNormLayer, MiniBatchAverageLayer, EqualizedLearning
 
 class Encoder(nn.Module):
     """Load encoder from pre-trained ResNet50 (places365 CNNs) model. Link: http://places2.csail.mit.edu/models_places365/resnet50_places365.pth.tar"""
-    def __init__(self, model_weights, depth_model, device="cuda", train_enc=True):
+    def __init__(self, model_weights, depth_model, constant_depth=None, device="cuda", train_enc=True):
         super().__init__()
         self.device = device
+        self._constant_depth = constant_depth
         self.model = models.resnet50(num_classes=365)
 
         if model_weights:
@@ -51,7 +52,8 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         if self._has_depth:
-            x = torch.cat((x, list(self.depth_decoder(self.depth_encoder(x)).values())[-1]), 1)
+            d = torch.full((x.shape[0], 1, x.shape[2], x.shape[3]), self._constant_depth, device=x.device) if self._constant_depth is not None else list(self.depth_decoder(self.depth_encoder(x)).values())[-1]
+            x = torch.cat((x, d), 1)
         return self.model.forward(x).unsqueeze(-1).unsqueeze(-1), x
 
 

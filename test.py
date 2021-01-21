@@ -24,6 +24,8 @@ def main():
     parser.add_argument("--version", type=str, default=None, help="Experiment version.")
     parser.add_argument("--no_depth", action="store_true", help="Don't apply the pre-trained depth model.")
     parser.add_argument("--no_places", action="store_true", help="Don't apply the pre-trained encoder model.")
+    parser.add_argument("--constant_depth", type=float, default=None, help="Set depth to constant.")
+    parser.add_argument("--n_test", type=float, default=1.0, help="Percentage of test set or the number of test examples.")
     args = parser.parse_args()
 
     if args.no_places:
@@ -72,12 +74,12 @@ def main():
         
 
     # Main model
-    model = Image2Reverb(args.encoder_path, args.depthmodel_path, test_callback=test_fn)
+    model = Image2Reverb(args.encoder_path, args.depthmodel_path, constant_depth=args.constant_depth, test_callback=test_fn)
     m = torch.load(args.model, map_location=model.device)
     model.load_state_dict(m["state_dict"])
     
     # Model training
-    trainer = Trainer(gpus=1)
+    trainer = Trainer(gpus=1, limit_test_batches=args.n_test)
     trainer.test(model, test_dataset)
 
 
