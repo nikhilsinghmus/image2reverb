@@ -1,4 +1,5 @@
 import os
+import math
 import numpy
 import torch
 import torch.fft
@@ -164,3 +165,59 @@ class Colorize(object):
             color_image[2][mask] = self.cmap[label][2]
 
         return color_image
+
+
+def init_lambertw(x):
+    z0 = torch.zeros_like(x, device=x.device)
+    z0[x > 1.] = x[x > 1.]
+    z0[x < -2.] = x[x < -2.].exp()*(1. - x[x < -2.].exp())
+    pade = lambda x: x * (3. + 6. * x + x ** 2.) / (3. + 9. * x + 5. * x ** 2)
+    z0[(x <= 1.) & (x >= -2.)] = pade(x[(x <= 1.) & (x >= -2.)].exp())
+    z0[z0 == 0.] = 1e-6
+    return z0
+
+def log_lambertw(x):
+    """
+    Computes the Lambert function via Halley algorithm which converges cubically.
+    The initialization is performed with a local approximation.
+    """
+    z = init_lambertw(x)
+    eps = torch.finfo(x.dtype).eps
+    a = lambda w: (w * ((w + eps).log() + w - x)) / (1 + w)
+    b = lambda w: -1 / (w * (1 + w))
+    for i in range(4):
+        c = a(z)
+        z = torch.max(z - c / (1 - 0.5 * c * b(z)), torch.tensor([eps], dtype=x.dtype, device=x.device)[:,None])
+    return z
+
+
+def sigma(l_i, tau, lam):
+    x = torch.ones(l_i.size(), device=l_i.device) * (-2/math.exp(1.))
+    beta = (l_i - tau)/lam
+    y = 0.5 * torch.max(x, beta)
+    n = -log_lambertw(y)
+    sigma = torch.exp(n)
+    return sigma
+
+
+def sl(l_i, tau, lam):
+    s = sigma(l_i, tau, lam) + 1e-8
+    return ((l_i - tau) * s) + (lam * (torch.log(s) ** 2)), s
+
+
+class AverageMeter:
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val
+        self.count += n
+        self.avg = self.sum / self.count
