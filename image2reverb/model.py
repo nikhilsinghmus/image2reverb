@@ -10,7 +10,7 @@ import pyroomacoustics
 from .networks import Encoder, Generator, Discriminator
 from .stft import STFT
 from .mel import LogMel
-from .util import compare_t60, sl, AverageMeter
+from .util import compare_t60
 
 
 # Hyperparameters
@@ -23,16 +23,14 @@ LAMBDA = 100
 
 
 class Image2Reverb(pl.LightningModule):
-    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, t60p=True, apply_sl=True, constant_depth = None, test_callback=None):
+    def __init__(self, encoder_path, depthmodel_path, latent_dimension=512, spec="stft", d_threshold=0.2, t60p=True, constant_depth = None, test_callback=None):
         super().__init__()
         self._latent_dimension = latent_dimension
         self._d_threshold = d_threshold
         self.constant_depth = constant_depth
         self.t60p = t60p
         self.confidence = {}
-        self.apply_sl = apply_sl
         self.tau = 50
-        self.meter = AverageMeter()
         self.test_callback = test_callback
         self._opt = (d_threshold != None) and (d_threshold > 0) and (d_threshold < 1)
         self.enc = Encoder(encoder_path, depthmodel_path, constant_depth=self.constant_depth, device=self.device)
@@ -73,16 +71,6 @@ class Image2Reverb(pl.LightningModule):
                 t60_err = torch.Tensor([compare_t60(torch.exp(a).sum(-2).squeeze(), torch.exp(b).sum(-2).squeeze()) for a, b in zip(spec, fake_spec)]).to(self.device).mean()
                 G_loss += t60_err
                 self.log("t60", t60_err, on_step=True, on_epoch=True, prog_bar=True)
-            
-            if self.apply_sl:
-                G_loss, s = sl(G_loss, self.meter.avg, 1)
-                self.meter.update(G_loss.detach().sum(), G_loss.detach().numel())
-                self.log("avg", self.meter.avg, on_step=True, on_epoch=True, prog_bar=True)
-                self.log("sigma", s, on_step=True, on_epoch=True, prog_bar=True)
-                for i, path in enumerate(p[::2]):
-                    example_num = os.path.basename(path[0])
-                    example_num = example_num[:example_num.rfind("_")]
-                    self.confidence[example_num] = float(s[i][0])
 
             if self._opt:
                 self.manual_backward(G_loss, self.opts[optimizer_idx])
