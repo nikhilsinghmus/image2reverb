@@ -4,7 +4,7 @@ import itertools
 from shutil import copyfile
 #dataset_outdir = './'
 
-dataset_outdir =  '/om2/user/jsmentch/projects/mit6862/pix2pixHD/datasets/room2reverb/' #where to save dataset files
+dataset_outdir =  '/datasets/room2reverb/' #where to save dataset files
 if not os.path.exists(dataset_outdir+'train_img'):
     os.mkdir(dataset_outdir+'train_img')
     os.mkdir(dataset_outdir+'train_label')
