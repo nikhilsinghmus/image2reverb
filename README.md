@@ -1,8 +1,11 @@
 # Image2Reverb
 
+#### Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis
+Nikhil Singh, Jeff Mentch, Jerry Ng, Matthew Beveridge, Iddo Drori
+
 [__Project Page__](https://web.media.mit.edu/~nsingh1/image2reverb/)
 
-Code for the paper [Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis](https://arxiv.org/abs/2103.14201). Image2Reverb is a method for generating audio impulse responses, to simulate the acoustic reverberation of a given environment, from a 2D image of it.
+Code for the ICCV 2021 paper [[arXiv]](https://arxiv.org/abs/2103.14201). Image2Reverb is a method for generating audio impulse responses, to simulate the acoustic reverberation of a given environment, from a 2D image of it.
 
 ![](webpage/src/splash.png)
 
