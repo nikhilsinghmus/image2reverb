@@ -1,7 +1,11 @@
 # Image2Reverb
 
+[__Project Page__](https://web.media.mit.edu/~nsingh1/image2reverb/)
 
-Image2Reverb is an end-to-end neural network that generates plausible audio impulse responses from single images of acoustic environments. Code for the paper [Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis](https://arxiv.org/abs/2103.14201). The architecture is a conditional GAN with a ResNet50 (pre-trained on Places365 and fine-tuned) image encoder. It generates monoaural audio impulse responses (directly applicable to convolution applications) as magnitude spectrograms.
+Code for the paper [Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis](https://arxiv.org/abs/2103.14201). Image2Reverb is a method for generating audio impulse responses, to simulate the acoustic reverberation of a given environment, from a 2D image of it.
+
+![](webpage/src/splash.png)
+
 
 ## Dependencies
 
@@ -25,10 +29,24 @@ Image2Reverb is an end-to-end neural network that generates plausible audio impu
 * matplotlib
 
 
-## Usage
+## Resources
 
-We will make a pre-trained model available soon!
+[Model Checkpoint](https://media.mit.edu/~nsingh1/image2reverb/model.ckpt)
 
-## Acknowledgments
+
+## Code Acknowlegdements
 
 We borrow and adapt code snippets from [GANSynth](https://github.com/magenta/magenta/tree/master/magenta/models/gansynth) (and [this](https://github.com/ss12f32v/GANsynth-pytorch) PyTorch re-implementation), additional snippets from [this](https://github.com/shanexn/pytorch-pggan) PGGAN implementation, [monodepth2](https://github.com/nianticlabs/monodepth2), [this](https://github.com/jacobgil/pytorch-grad-cam) GradCAM implementation, and more.
+
+## Citation
+
+If you find the code, data, or models useful for your research, please consider citing our paper:
+
+```bibtex
+@article{singh2021image2reverb,
+  title={Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis},
+  author={Singh, Nikhil and Mentch, Jeff and Ng, Jerry and Beveridge, Matthew and Drori, Iddo},
+  journal={arXiv preprint arXiv:2103.14201},
+  year={2021}
+}
+```

@@ -19,6 +19,16 @@ tmp/
 lightning_logs/
 *test*/
 *checkpoints*/
+webpage/src/examples/
+webpage/node_modules
+*.wav
+*.aif
+*.mp3
+*.m4a
+*.asd
+*.mp4
+*.mov
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
