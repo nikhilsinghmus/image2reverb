@@ -21,6 +21,7 @@ lightning_logs/
 *checkpoints*/
 webpage/src/examples/
 webpage/node_modules
+!webpage/src/splash.png
 *.wav
 *.aif
 *.mp3
