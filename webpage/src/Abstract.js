@@ -6,7 +6,7 @@ const Abstract = (props) => {
     return (
         <Container style={{paddingTop: 40, width: "100%"}} className="justify-content-md-left" fluid>
             <Row align="center">
-                <img src={require("" + props.img).default} style={{width: "80%", margin: "0 auto"}}/>
+                <Col><img src={require("" + props.img).default} style={{width: "80%", margin: "0 auto"}}/></Col>
             </Row>
             <br/>
             <Row align="center">

@@ -24,7 +24,7 @@ const App = () => {
 
     return (
         <Container fluid style={{width: "100%", paddingLeft: 0, paddingRight: 0}}>
-            <Container fluid style={{width: "100%", backgroundColor: "rgba(234, 240, 244, 1)"}}>
+            <Container fluid style={{width: "100%"}}>
                 <br/><br/>
                 <h2 align="center"><b>Image2Reverb</b>: Cross-Model Reverb Impulse Response Synthesis</h2>
                 <Authors authors={authorlist} venue={metadata.venue} paper={metadata.paper} github={metadata.github}/>
@@ -52,7 +52,7 @@ const App = () => {
             </Dropdown>
             <br/>
             <Palette key={currentPalette} palette={palettes[currentPalette]} src_dir={"./examples/"}/>
-            <p align="center" style={{fontSize: 12, color: "gray"}}>Updated July 28th 2021.</p>
+            <p align="center" style={{fontSize: 12, color: "gray"}}>Updated August 19th 2021.</p>
         </Container>
     );
 }
