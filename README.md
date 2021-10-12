@@ -46,10 +46,12 @@ We borrow and adapt code snippets from [GANSynth](https://github.com/magenta/mag
 If you find the code, data, or models useful for your research, please consider citing our paper:
 
 ```bibtex
-@article{singh2021image2reverb,
-  title={Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis},
-  author={Singh, Nikhil and Mentch, Jeff and Ng, Jerry and Beveridge, Matthew and Drori, Iddo},
-  journal={arXiv preprint arXiv:2103.14201},
-  year={2021}
+@InProceedings{Singh_2021_ICCV,
+    author    = {Singh, Nikhil and Mentch, Jeff and Ng, Jerry and Beveridge, Matthew and Drori, Iddo},
+    title     = {Image2Reverb: Cross-Modal Reverb Impulse Response Synthesis},
+    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+    month     = {October},
+    year      = {2021},
+    pages     = {286-295}
 }
 ```
